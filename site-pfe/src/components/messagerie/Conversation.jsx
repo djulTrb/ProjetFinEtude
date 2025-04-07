@@ -22,7 +22,7 @@ const Conversation = ({ conversation }) => {
     } else if (isYesterday(timestamp)) {
       return t('messagerie.yesterday');
     } else {
-      return formatDate(timestamp);
+      return formatDate(timestamp, t);
     }
   };
 

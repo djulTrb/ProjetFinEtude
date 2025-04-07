@@ -7,7 +7,6 @@ import Layout from './components/Layout';
 import Inscription from './components/auth/Inscription';
 import PatientRegistration from './components/auth/PatientRegistration';
 import DoctorRegistration from './components/auth/DoctorRegistration';
-import AccountActivation from './components/auth/AccountActivation';
 import TableauDeBord from './components/TableauDeBord';
 import AppointmentRequests from './components/AppointmentRequests';
 import Agenda from './components/Agenda';
@@ -18,7 +17,13 @@ import Messagerie from './components/Messagerie';
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  return isAuthenticated ? children : <Navigate to="/inscription" />;
+  return isAuthenticated ? children : <Navigate to="/inscription" replace />;
+};
+
+// Public Route component (redirects to dashboard if already authenticated)
+const PublicRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  return isAuthenticated ? <Navigate to="/tableau-de-bord" replace /> : children;
 };
 
 export default function App() {
@@ -28,13 +33,33 @@ export default function App() {
     <Provider store={store}>
       <Router>
         <Routes>
-          {/* Public routes */}
-          <Route path="/inscription" element={<Inscription />} />
-          <Route path="/inscription/patient" element={<PatientRegistration />} />
-          <Route path="/inscription/medecin" element={<DoctorRegistration />} />
-          <Route path="/activation" element={<AccountActivation />} />
+          {/* Public routes - only accessible when not authenticated */}
+          <Route
+            path="/inscription"
+            element={
+              <PublicRoute>
+                <Inscription />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/inscription/patient"
+            element={
+              <PublicRoute>
+                <PatientRegistration />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/inscription/medecin"
+            element={
+              <PublicRoute>
+                <DoctorRegistration />
+              </PublicRoute>
+            }
+          />
 
-          {/* Protected routes with Layout */}
+          {/* Protected routes with Layout - only accessible when authenticated */}
           <Route
             path="/"
             element={
@@ -52,12 +77,13 @@ export default function App() {
             <Route path="parametres" element={<Parameters />} />
           </Route>
 
-          {/* Redirect root to dashboard or inscription */}
+          {/* Catch all route - redirects to inscription or dashboard based on auth status */}
           <Route
             path="*"
             element={
               <Navigate
                 to={localStorage.getItem('isAuthenticated') === 'true' ? '/tableau-de-bord' : '/inscription'}
+                replace
               />
             }
           />

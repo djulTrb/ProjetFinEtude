@@ -1,8 +1,22 @@
-import { formatDate } from "./utils";
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { format, parseISO } from 'date-fns';
 
 export default function AnnouncementCard({ announcement, onDelete }) {
+  const { t } = useTranslation();
+
+  const formatDate = (dateString) => {
+    const date = parseISO(dateString);
+    const dayIndex = date.getDay();
+    const monthIndex = date.getMonth();
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    
+    return `${t(`agenda.days.${days[dayIndex]}`)} ${format(date, 'd')} ${t(`agenda.months.${months[monthIndex]}`)} ${format(date, 'yyyy')}`;
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {announcement.image && (
         <div className="aspect-video w-full overflow-hidden">
           <img
@@ -27,7 +41,7 @@ export default function AnnouncementCard({ announcement, onDelete }) {
               onClick={() => onDelete(announcement.id)}
               className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium shrink-0"
             >
-              Supprimer
+              {t('announcements.card.delete')}
             </button>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-500">

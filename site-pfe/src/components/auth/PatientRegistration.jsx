@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { User, Envelope, Lock, ArrowLeft } from 'phosphor-react';
+import LanguageSwitch from './LanguageSwitch';
 
 export default function PatientRegistration() {
   const { t } = useTranslation();
@@ -28,42 +29,43 @@ export default function PatientRegistration() {
     
     // Simple validation
     if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError('Veuillez remplir tous les champs');
+      setError(t('auth.requiredFields'));
       return;
     }
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(t('auth.passwordsDoNotMatch'));
       return;
     }
     
-    // In a real app, this would send data to a backend
-    // For now, we'll just simulate a successful registration
-    setSuccess(true);
-    
-    // Simulate email confirmation
-    setTimeout(() => {
-      navigate('/activation');
-    }, 2000);
+    // Set authentication and role
+    localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userRole', 'patient');
+    localStorage.setItem('userName', formData.fullName);
+    localStorage.setItem('userEmail', formData.email);
+    navigate('/tableau-de-bord');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8">
-        <div>
+        <div className="flex justify-between items-center">
           <button
             onClick={() => navigate('/inscription')}
-            className="flex items-center text-blue-600 hover:text-blue-500 transition-colors duration-200 mb-4"
+            className="flex items-center text-blue-600 hover:text-blue-500 transition-colors duration-200"
           >
             <ArrowLeft size={16} className="mr-1" />
-            Retour
+            {t('auth.back')}
           </button>
-          
+          <LanguageSwitch />
+        </div>
+        
+        <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Inscription Patient
+            {t('auth.registerAsPatient')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Créez votre compte patient
+            {t('auth.patientRegistrationMessage')}
           </p>
         </div>
 

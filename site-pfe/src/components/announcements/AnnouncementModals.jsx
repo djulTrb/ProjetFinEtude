@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "phosphor-react";
+import { useTranslation } from "react-i18next";
 import AnnouncementForm from "./AnnouncementForm";
 
 export function AddModal({ 
@@ -12,6 +13,8 @@ export function AddModal({
   handleImageChange,
   handleAdd 
 }) {
+  const { t } = useTranslation();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -29,7 +32,7 @@ export function AddModal({
           >
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800">
-                Ajouter une annonce
+                {t('announcements.addModal.title')}
               </h2>
               <button
                 onClick={onClose}
@@ -56,6 +59,8 @@ export function AddModal({
 }
 
 export function DeleteModal({ isOpen, onClose, onConfirm, announcement }) {
+  const { t } = useTranslation();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -72,24 +77,25 @@ export function DeleteModal({ isOpen, onClose, onConfirm, announcement }) {
             className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
           >
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Supprimer l'annonce
+              {t('announcements.deleteModal.title')}
             </h2>
             <p className="text-gray-600 mb-6">
-              Êtes-vous sûr de vouloir supprimer l'annonce "{announcement?.title}" ?
-              Cette action est irréversible.
+              {t('announcements.deleteModal.confirmation', { title: announcement?.title })}
+              <br />
+              {t('announcements.deleteModal.warning')}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg"
               >
-                Annuler
+                {t('announcements.deleteModal.cancel')}
               </button>
               <button
                 onClick={onConfirm}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg"
               >
-                Supprimer
+                {t('announcements.deleteModal.delete')}
               </button>
             </div>
           </motion.div>

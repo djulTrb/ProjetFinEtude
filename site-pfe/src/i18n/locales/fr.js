@@ -44,14 +44,32 @@ export default {
       change: "Changer le mot de passe",
       cancel: "Annuler",
     },
+    disconnect: {
+      title: "Déconnexion",
+      description: "Déconnectez-vous de votre compte",
+      button: "Se déconnecter",
+    },
   },
   messagerie: {
     title: "Messagerie",
-    conversations: "Conversations",
+    today: "Aujourd'hui",
     yesterday: "Hier",
-    selectConversation: "Sélectionnez une conversation",
     typeMessage: "Tapez votre message...",
-    noConversations: "Aucune conversation",
+    send: "Envoyer",
+    noMessages: "Aucun message",
+    startConversation: "Commencez une conversation",
+    searchPlaceholder: "Rechercher une conversation...",
+    newMessage: "Nouveau message",
+    deleteConversation: "Supprimer la conversation",
+    blockUser: "Bloquer l'utilisateur",
+    unblockUser: "Débloquer l'utilisateur",
+    reportUser: "Signaler l'utilisateur",
+    attachments: {
+      image: "Image",
+      file: "Fichier",
+      audio: "Audio",
+      video: "Vidéo"
+    }
   },
   agenda: {
     title: "Agenda",
@@ -76,6 +94,40 @@ export default {
       "follow-up": "Suivi",
       emergency: "Urgence",
       other: "Autre"
+    },
+    days: {
+      monday: "Lundi",
+      tuesday: "Mardi",
+      wednesday: "Mercredi",
+      thursday: "Jeudi",
+      friday: "Vendredi",
+      saturday: "Samedi",
+      sunday: "Dimanche"
+    },
+    months: {
+      january: "Janvier",
+      february: "Février",
+      march: "Mars",
+      april: "Avril",
+      may: "Mai",
+      june: "Juin",
+      july: "Juillet",
+      august: "Août",
+      september: "Septembre",
+      october: "Octobre",
+      november: "Novembre",
+      december: "Décembre"
+    },
+    timeSlots: {
+      morning: "Matin",
+      afternoon: "Après-midi",
+      evening: "Soir"
+    },
+    status: {
+      pending: "En attente",
+      accepted: "Accepté",
+      declined: "Refusé",
+      cancelled: "Annulé"
     }
   },
   appointmentRequests: {
@@ -83,7 +135,9 @@ export default {
     subtitle: "Gérez les demandes de rendez-vous en attente",
     noRequests: "Aucune demande de rendez-vous en attente",
     accept: "Accepter",
-    decline: "Refuser"
+    decline: "Refuser",
+    note: "Note du patient",
+    viewNote: "Voir la note"
   },
   tableauDeBord: {
     dashboard: 'Tableau de bord',
@@ -132,5 +186,44 @@ export default {
     loginError: "Identifiants invalides",
     requiredFields: "Tous les champs sont requis",
     noAccount: "Vous n'avez pas de compte ?",
+  },
+  announcements: {
+    title: "Annonces",
+    subtitle: "Gérez et publiez vos annonces",
+    addButton: "Ajouter une annonce",
+    noAnnouncements: "Aucune annonce pour le moment",
+    addAnnouncementHint: "Cliquez sur \"Ajouter une annonce\" pour commencer",
+    addModal: {
+      title: "Ajouter une annonce",
+      titleLabel: "Titre de l'annonce",
+      titlePlaceholder: "Titre de l'annonce",
+      contentLabel: "Contenu",
+      contentPlaceholder: "Contenu de l'annonce",
+      photoLabel: "Photo (optionnelle)",
+      addPhoto: "Ajouter une photo",
+      removePhoto: "Supprimer la photo",
+      cancel: "Annuler",
+      publish: "Publier",
+      update: "Mettre à jour"
+    },
+    deleteModal: {
+      title: "Supprimer l'annonce",
+      confirmation: "Êtes-vous sûr de vouloir supprimer l'annonce \"{{title}}\" ?",
+      warning: "Cette action est irréversible.",
+      cancel: "Annuler",
+      delete: "Supprimer"
+    },
+    card: {
+      delete: "Supprimer"
+    }
+  },
+  roles: {
+    doctor: "Médecin",
+    patient: "Patient",
+    cardiologist: "Cardiologue",
+    dermatologist: "Dermatologue",
+    ophthalmologist: "Ophtalmologue",
+    gynecologist: "Gynécologue",
+    pediatrician: "Pédiatre"
   },
 }; 

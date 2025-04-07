@@ -1,3 +1,5 @@
+import { format, parseISO } from 'date-fns';
+
 export const initialAnnouncements = [
   {
     id: 1,
@@ -27,7 +29,12 @@ export const initialAnnouncements = [
   },
 ];
 
-export function formatDate(dateString) {
-  const options = { year: "numeric", month: "long", day: "numeric" };
-  return new Date(dateString).toLocaleDateString("fr-FR", options);
+export function formatDate(dateString, t) {
+  const date = parseISO(dateString);
+  const dayIndex = date.getDay();
+  const monthIndex = date.getMonth();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  
+  return `${t(`agenda.days.${days[dayIndex]}`)} ${format(date, 'd')} ${t(`agenda.months.${months[monthIndex]}`)} ${format(date, 'yyyy')}`;
 } 

@@ -42,12 +42,12 @@ export default function Sidebar() {
   }, []);
 
   const navItems = [
-    { path: "/", icon: House, label: "Tableau de bord" },
-    { path: "/annonces", icon: Megaphone, label: "Annonces" },
-    { path: "/messagerie", icon: ChatCircle, label: "Messagerie" },
-    { path: "/agenda", icon: Calendar, label: "Agenda" },
-    { path: "/demandes-rdv", icon: Bell, label: "Demandes RDV" },
-    { path: "/parametres", icon: Gear, label: "Paramètres" },
+    { path: "/", icon: House, label: t('tableauDeBord.dashboard') },
+    { path: "/annonces", icon: Megaphone, label: t('nav.announcements') },
+    { path: "/messagerie", icon: ChatCircle, label: t('nav.messages') },
+    { path: "/agenda", icon: Calendar, label: t('nav.calendar') },
+    { path: "/demandes-rdv", icon: Bell, label: t('appointmentRequests.title') },
+    { path: "/parametres", icon: Gear, label: t('settings.title') },
   ];
 
   // For mobile, render a full overlay
@@ -89,7 +89,7 @@ export default function Sidebar() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{t('common.greeting')}, {user.name}</p>
-                    <p className="text-xs text-gray-600">{user.role}</p>
+                    <p className="text-xs text-gray-600">{t(`roles.${user.role.toLowerCase()}`)}</p>
                   </div>
                 </div>
               </div>
@@ -189,38 +189,35 @@ export default function Sidebar() {
             const isActive = location.pathname === item.path;
 
             return (
-              <Link
+          <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => dispatch(setSidebarOpen(false))}
-                className={`flex items-center px-4 py-3 mb-1 transition-colors ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
+                className={`
+                  flex items-center px-4 py-3 mb-1 transition-colors overflow-hidden
+                  ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"}
+                `}
               >
-                <motion.div 
-                  className={`p-1.5 rounded-lg relative left-0.5 ${isActive ? "bg-blue-100" : "bg-gray-100"}`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <div 
+                  className={`
+                    flex-shrink-0 p-1.5 rounded-lg relative left-0.5
+                    ${isActive ? "bg-blue-100" : "bg-gray-100"}
+                  `}
                 >
                   <Icon
                     weight={isActive ? "fill" : "regular"}
                     className={`w-5 h-5 ${isActive ? "text-blue-600" : "text-gray-500"}`}
-                  />
-                </motion.div>
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: isOpen ? 1 : 0 }}
-                  className="ml-3 whitespace-nowrap font-medium"
-                >
-                  {item.label}
-                </motion.span>
-              </Link>
+              />
+            </div>
+                {isOpen && (
+                  <span className="ml-3 text-sm font-medium truncate">
+                    {item.label}
+                  </span>
+                )}
+          </Link>
             );
           })}
         </div>
-      </div>
+            </div>
     </motion.div>
   );
 }

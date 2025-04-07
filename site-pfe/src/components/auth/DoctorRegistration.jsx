@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Envelope, Lock, ArrowLeft, IdentificationCard, Buildings, Phone } from 'phosphor-react';
+import { User, Envelope, Lock, ArrowLeft, Key } from 'phosphor-react';
+import LanguageSwitch from './LanguageSwitch';
 
 export default function DoctorRegistration() {
   const { t } = useTranslation();
@@ -11,10 +12,7 @@ export default function DoctorRegistration() {
     email: '',
     password: '',
     confirmPassword: '',
-    licenseNumber: '',
-    specialization: '',
-    clinicName: '',
-    phoneNumber: ''
+    clinicCode: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -31,44 +29,45 @@ export default function DoctorRegistration() {
     e.preventDefault();
     
     // Simple validation
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword || 
-        !formData.licenseNumber || !formData.specialization || !formData.clinicName || !formData.phoneNumber) {
-      setError('Veuillez remplir tous les champs');
+    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword || !formData.clinicCode) {
+      setError(t('auth.requiredFields'));
       return;
     }
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(t('auth.passwordsDoNotMatch'));
       return;
     }
     
-    // In a real app, this would send data to a backend
-    // For now, we'll just simulate a successful registration
-    setSuccess(true);
-    
-    // Simulate email confirmation
-    setTimeout(() => {
-      navigate('/activation');
-    }, 2000);
+    // Set authentication and role
+    localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userRole', 'doctor');
+    localStorage.setItem('userName', formData.fullName);
+    localStorage.setItem('userEmail', formData.email);
+    localStorage.setItem('clinicCode', formData.clinicCode);
+    navigate('/tableau-de-bord');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8">
-        <div>
+        <div className="flex justify-between items-center">
           <button
             onClick={() => navigate('/inscription')}
-            className="flex items-center text-blue-600 hover:text-blue-500 transition-colors duration-200 mb-4"
+            className="flex items-center text-blue-600 hover:text-blue-500 transition-colors duration-200"
           >
             <ArrowLeft size={16} className="mr-1" />
-            Retour
+            {t('auth.back')}
           </button>
-          
+          <LanguageSwitch />
+        </div>
+        
+        <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Inscription Médecin
+            {t('auth.registerAsDoctor')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Créez votre compte médecin
+            {t('auth.doctorRegistrationMessage')}
           </p>
         </div>
 
@@ -87,10 +86,10 @@ export default function DoctorRegistration() {
             <div className="flex">
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-green-800">
-                  Merci ! Un lien de confirmation vous a été envoyé à votre adresse e-mail.
+                  {t('auth.confirmationEmailSent')}
                 </h3>
                 <p className="text-sm text-green-700 mt-1">
-                  Redirection vers la page d'activation...
+                  {t('auth.verifying')}
                 </p>
               </div>
             </div>
@@ -100,7 +99,7 @@ export default function DoctorRegistration() {
             <div className="rounded-md shadow-sm space-y-4">
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom complet
+                  {t('auth.fullName')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -113,7 +112,7 @@ export default function DoctorRegistration() {
                     autoComplete="name"
                     required
                     className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Votre nom complet"
+                    placeholder={t('auth.fullName')}
                     value={formData.fullName}
                     onChange={handleChange}
                   />
@@ -122,7 +121,7 @@ export default function DoctorRegistration() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse e-mail
+                  {t('auth.email')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -143,84 +142,21 @@ export default function DoctorRegistration() {
               </div>
 
               <div>
-                <label htmlFor="licenseNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Numéro de licence
+                <label htmlFor="clinicCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('auth.clinicCode')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <IdentificationCard className="h-5 w-5 text-gray-400" />
+                    <Key className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    id="licenseNumber"
-                    name="licenseNumber"
+                    id="clinicCode"
+                    name="clinicCode"
                     type="text"
                     required
                     className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Votre numéro de licence"
-                    value={formData.licenseNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
-                  Spécialisation
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="specialization"
-                    name="specialization"
-                    type="text"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Votre spécialisation"
-                    value={formData.specialization}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="clinicName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la clinique
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Buildings className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="clinicName"
-                    name="clinicName"
-                    type="text"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Nom de votre clinique"
-                    value={formData.clinicName}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Numéro de téléphone
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Votre numéro de téléphone"
-                    value={formData.phoneNumber}
+                    placeholder={t('auth.clinicCode')}
+                    value={formData.clinicCode}
                     onChange={handleChange}
                   />
                 </div>
@@ -228,7 +164,7 @@ export default function DoctorRegistration() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -250,7 +186,7 @@ export default function DoctorRegistration() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirmer le mot de passe
+                  {t('auth.confirmPassword')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,7 +212,7 @@ export default function DoctorRegistration() {
                 type="submit"
                 className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
-                Créer mon compte
+                {t('auth.register')}
               </button>
             </div>
           </form>

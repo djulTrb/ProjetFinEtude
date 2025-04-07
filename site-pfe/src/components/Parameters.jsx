@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageDropdown from './settings/LanguageDropdown';
 import ProfileSection from './settings/ProfileSection';
 import PasswordSection from './settings/PasswordSection';
+import DisconnectSection from './settings/DisconnectSection';
 
 export default function Parameters() {
   const { t } = useTranslation();
@@ -13,6 +14,7 @@ export default function Parameters() {
       <LanguageDropdown />
       <ProfileSection />
       <PasswordSection />
+      <DisconnectSection />
     </div>
   );
 } 

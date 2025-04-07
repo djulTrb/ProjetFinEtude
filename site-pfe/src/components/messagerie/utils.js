@@ -1,3 +1,5 @@
+import { format, parseISO, isToday as isTodayFns, isYesterday as isYesterdayFns } from 'date-fns';
+
 // Mock data for conversations
 export const conversations = [
   {
@@ -169,31 +171,29 @@ export const getMessages = (conversationId) => {
 
 // Format timestamp to readable time
 export const formatTime = (timestamp) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const date = parseISO(timestamp);
+  return format(date, 'HH:mm');
 };
 
 // Format date to readable format
-export const formatDate = (timestamp) => {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+export const formatDate = (timestamp, t) => {
+  const date = parseISO(timestamp);
+  const dayIndex = date.getDay();
+  const monthIndex = date.getMonth();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  
+  return `${t(`agenda.days.${days[dayIndex]}`)} ${format(date, 'd')} ${t(`agenda.months.${months[monthIndex]}`)} ${format(date, 'yyyy')}`;
 };
 
 // Check if a date is today
 export const isToday = (timestamp) => {
-  const today = new Date();
-  const date = new Date(timestamp);
-  return date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
+  const date = typeof timestamp === 'string' ? parseISO(timestamp) : timestamp;
+  return isTodayFns(date);
 };
 
 // Check if a date is yesterday
 export const isYesterday = (timestamp) => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const date = new Date(timestamp);
-  return date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
+  const date = typeof timestamp === 'string' ? parseISO(timestamp) : timestamp;
+  return isYesterdayFns(date);
 }; 

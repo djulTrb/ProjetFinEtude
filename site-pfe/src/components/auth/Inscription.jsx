@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Envelope, Lock, User } from 'phosphor-react';
 import { TbStethoscope } from "react-icons/tb";
+import LanguageSwitch from './LanguageSwitch';
 
 export default function Inscription() {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export default function Inscription() {
     e.preventDefault();
     
     if (!formData.email || !formData.password) {
-      setError('Veuillez remplir tous les champs');
+      setError(t('auth.requiredFields'));
       return;
     }
     
@@ -43,14 +44,15 @@ export default function Inscription() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            {showLogin ? 'Connexion' : 'Créer un compte'}
+        <div className="flex justify-between items-center">
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {showLogin ? t('auth.login') : t('auth.register')}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {showLogin ? 'Connectez-vous à votre compte' : 'Choisissez votre type de compte'}
-          </p>
+          <LanguageSwitch />
         </div>
+        <p className="text-center text-sm text-gray-600">
+          {showLogin ? t('auth.loginMessage') : t('auth.roleSelectionMessage')}
+        </p>
 
         {error && (
           <div className="rounded-md bg-red-50 p-4">
@@ -67,7 +69,7 @@ export default function Inscription() {
             <div className="rounded-md shadow-sm space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse e-mail
+                  {t('auth.email')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -89,7 +91,7 @@ export default function Inscription() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -115,7 +117,7 @@ export default function Inscription() {
                 type="submit"
                 className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
-                Se connecter
+                {t('auth.login')}
               </button>
             </div>
 
@@ -125,7 +127,7 @@ export default function Inscription() {
                 onClick={() => setShowLogin(false)}
                 className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
               >
-                Créer un compte
+                {t('auth.register')}
               </button>
             </div>
           </form>
@@ -137,7 +139,7 @@ export default function Inscription() {
                 className="group relative flex items-center justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <User className="h-5 w-5 mr-2" />
-                Je suis un patient
+                {t('auth.registerAsPatient')}
               </button>
 
               <button
@@ -145,7 +147,7 @@ export default function Inscription() {
                 className="group relative flex items-center justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <TbStethoscope className="h-5 w-5 mr-2" />
-                Je suis un médecin
+                {t('auth.registerAsDoctor')}
               </button>
             </div>
 
@@ -155,7 +157,7 @@ export default function Inscription() {
                 onClick={() => setShowLogin(true)}
                 className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
               >
-                Déjà un compte ? Se connecter
+                {t('auth.login')}
               </button>
             </div>
           </div>

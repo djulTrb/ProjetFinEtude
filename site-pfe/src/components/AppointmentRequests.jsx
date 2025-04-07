@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, User } from 'phosphor-react';
+import { X, Check, User, Note } from 'phosphor-react';
+import { format, parseISO } from 'date-fns';
 
 // Mock data for appointment requests - in a real app, this would come from an API
 const mockAppointmentRequests = [
@@ -11,7 +12,8 @@ const mockAppointmentRequests = [
     profilePicture: null, // URL to profile picture if available
     date: '2023-06-15T10:00:00',
     type: 'consultation',
-    status: 'pending'
+    status: 'pending',
+    note: 'Première consultation pour douleurs chroniques'
   },
   {
     id: 2,
@@ -20,7 +22,8 @@ const mockAppointmentRequests = [
     profilePicture: null,
     date: '2023-06-16T14:30:00',
     type: 'follow-up',
-    status: 'pending'
+    status: 'pending',
+    note: null
   },
   {
     id: 3,
@@ -29,13 +32,15 @@ const mockAppointmentRequests = [
     profilePicture: null,
     date: '2023-06-17T09:15:00',
     type: 'emergency',
-    status: 'pending'
+    status: 'pending',
+    note: 'Urgence: douleur intense à la poitrine'
   }
 ];
 
 export default function AppointmentRequests() {
   const { t } = useTranslation();
   const [requests, setRequests] = useState(mockAppointmentRequests);
+  const [selectedNote, setSelectedNote] = useState(null);
 
   // Handle appointment action (accept or decline)
   const handleAppointmentAction = (requestId, action) => {
@@ -59,15 +64,39 @@ export default function AppointmentRequests() {
 
   // Format date for display
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const date = parseISO(dateString);
+    const dayIndex = date.getDay();
+    const monthIndex = date.getMonth();
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    
+    return `${t(`agenda.days.${days[dayIndex]}`)} ${format(date, 'd')} ${t(`agenda.months.${months[monthIndex]}`)} ${format(date, 'yyyy')} ${format(date, 'HH:mm')}`;
+  };
+
+  // Note modal
+  const renderNoteModal = () => {
+    if (!selectedNote) return null;
+
+    return (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        onClick={() => setSelectedNote(null)}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6"
+          onClick={e => e.stopPropagation()}
+        >
+          <h3 className="text-lg font-semibold mb-2">{t('appointmentRequests.note')}</h3>
+          <p className="text-gray-600">{selectedNote}</p>
+          <button 
+            onClick={() => setSelectedNote(null)}
+            className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            {t('common.close')}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -108,17 +137,30 @@ export default function AppointmentRequests() {
                   </div>
                 </div>
 
-                {/* Appointment type flag and action buttons in a row */}
-                <div className="w-full sm:w-2/4 flex flex-row justify-self-end items-center justify-between">
-                  {/* Appointment type flag */}
-                  <div className="flex justify-start sm:-translate-x-1/2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getAppointmentTypeColor(request.type)}`}>
-                      {t(`agenda.appointmentTypes.${request.type}`)}
-                    </span>
+                {/* Appointment type flag, note icon, and action buttons in a row */}
+                <div className="w-full sm:w-2/4 flex flex-row justify-self-end items-center">
+                  <div className="flex items-center gap-2 flex-1">
+                    {/* Appointment type flag */}
+                    <div className="flex-shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getAppointmentTypeColor(request.type)}`}>
+                        {t(`agenda.appointmentTypes.${request.type}`)}
+                      </span>
+                    </div>
+
+                    {/* Note icon - only show if there's a note */}
+                    {request.note && (
+                      <button
+                        onClick={() => setSelectedNote(request.note)}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+                        title={t('appointmentRequests.viewNote')}
+                      >
+                        <Note size={20} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 flex-shrink-0">
                     <button 
                       onClick={() => handleAppointmentAction(request.id, 'decline')}
                       className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
@@ -140,6 +182,9 @@ export default function AppointmentRequests() {
           </div>
         )}
       </div>
+
+      {/* Note Modal */}
+      {renderNoteModal()}
     </div>
   );
 } 

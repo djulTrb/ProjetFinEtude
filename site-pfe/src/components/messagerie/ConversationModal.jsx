@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { getMessages, formatTime, isToday, isYesterday, formatDate } from './utils';
-import { Paperclip, X, Image } from 'phosphor-react';
+import { Paperclip, X, Image, PaperPlaneRight } from 'phosphor-react';
+import { format as formatDateFns, parseISO } from 'date-fns';
 
 const ConversationModal = ({ conversation, onClose }) => {
   const { t } = useTranslation();
@@ -22,12 +23,14 @@ const ConversationModal = ({ conversation, onClose }) => {
   }, [messages]);
 
   const getTimeDisplay = (timestamp) => {
-    if (isToday(timestamp)) {
-      return formatTime(timestamp);
-    } else if (isYesterday(timestamp)) {
+    const date = typeof timestamp === 'string' ? parseISO(timestamp) : timestamp;
+    
+    if (isToday(date)) {
+      return t('messagerie.today');
+    } else if (isYesterday(date)) {
       return t('messagerie.yesterday');
     } else {
-      return formatDate(timestamp);
+      return formatDate(timestamp, t);
     }
   };
 
@@ -112,25 +115,56 @@ const ConversationModal = ({ conversation, onClose }) => {
                   <p className="text-sm text-gray-500">{conversation.user.role}</p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 focus:outline-none"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    // Handle block user action
+                    const isBlocked = localStorage.getItem(`blocked_${conversation.user.id}`);
+                    if (isBlocked) {
+                      localStorage.removeItem(`blocked_${conversation.user.id}`);
+                    } else {
+                      localStorage.setItem(`blocked_${conversation.user.id}`, 'true');
+                    }
+                    onClose();
+                  }}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors flex items-center"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    className="w-5 h-5 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    />
+                  </svg>
+                  <span className="text-sm font-medium">{t('messagerie.blockUser')}</span>
+                </button>
+                <button
+                  onClick={onClose}
+                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
             
             {/* Messages */}
@@ -154,7 +188,7 @@ const ConversationModal = ({ conversation, onClose }) => {
                       <div
                         className={`max-w-[75%] p-3 ${
                           isCurrentUser
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
+                            ? 'bg-gradient-to-br from-sky-100 to-sky-200 text-gray-800 shadow-sm'
                             : 'bg-white text-gray-800 shadow-sm'
                         } rounded-2xl`}
                       >
@@ -175,7 +209,7 @@ const ConversationModal = ({ conversation, onClose }) => {
                           </div>
                         )}
                         <p className="text-sm">{message.text}</p>
-                        <span className={`text-xs mt-1 block ${isCurrentUser ? 'opacity-70' : 'text-gray-500'}`}>
+                        <span className={`text-xs mt-1 block ${isCurrentUser ? 'text-gray-500' : 'text-gray-500'}`}>
                           {formatTime(message.timestamp)}
                         </span>
                       </div>
@@ -233,8 +267,9 @@ const ConversationModal = ({ conversation, onClose }) => {
                 )}
                 <button 
                   onClick={handleSendMessage}
-                  className="bg-blue-500 text-white rounded-full p-3 hover:bg-blue-600 transition-colors"
+                  className="bg-blue-500 text-white rounded-full px-4 py-2 hover:bg-blue-600 transition-colors flex items-center"
                 >
+                  <span className="mr-1">{t('messagerie.send')}</span>
                   <svg
                     className="w-5 h-5"
                     fill="none"

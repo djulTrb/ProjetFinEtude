@@ -1,8 +1,8 @@
 export default {
   common: {
-    greeting: "مرحبا",
-    welcome: "مرحبا بك في مساحتك الشخصية",
-    empty: "فارغ في الوقت الحالي",
+    greeting: "مرحباً",
+    welcome: "مرحباً بك في مساحتك الشخصية",
+    empty: "فارغ حالياً",
     noAppointments: "ليس لديك مواعيد مجدولة",
     close: "إغلاق",
   },
@@ -44,14 +44,32 @@ export default {
       change: "تغيير كلمة المرور",
       cancel: "إلغاء",
     },
+    disconnect: {
+      title: "تسجيل الخروج",
+      description: "قم بتسجيل الخروج من حسابك",
+      button: "تسجيل الخروج",
+    },
   },
   messagerie: {
-    title: "الرسائل",
-    conversations: "المحادثات",
+    title: "المراسلات",
+    today: "اليوم",
     yesterday: "أمس",
-    selectConversation: "اختر محادثة",
     typeMessage: "اكتب رسالتك...",
-    noConversations: "لا توجد محادثات",
+    send: "إرسال",
+    noMessages: "لا توجد رسائل",
+    startConversation: "ابدأ محادثة",
+    searchPlaceholder: "البحث عن محادثة...",
+    newMessage: "رسالة جديدة",
+    deleteConversation: "حذف المحادثة",
+    blockUser: "حظر المستخدم",
+    unblockUser: "إلغاء حظر المستخدم",
+    reportUser: "الإبلاغ عن المستخدم",
+    attachments: {
+      image: "صورة",
+      file: "ملف",
+      audio: "صوت",
+      video: "فيديو"
+    }
   },
   agenda: {
     title: "التقويم",
@@ -76,6 +94,40 @@ export default {
       "follow-up": "متابعة",
       emergency: "طارئ",
       other: "أخرى"
+    },
+    days: {
+      monday: "الاثنين",
+      tuesday: "الثلاثاء",
+      wednesday: "الأربعاء",
+      thursday: "الخميس",
+      friday: "الجمعة",
+      saturday: "السبت",
+      sunday: "الأحد"
+    },
+    months: {
+      january: "يناير",
+      february: "فبراير",
+      march: "مارس",
+      april: "أبريل",
+      may: "مايو",
+      june: "يونيو",
+      july: "يوليو",
+      august: "أغسطس",
+      september: "سبتمبر",
+      october: "أكتوبر",
+      november: "نوفمبر",
+      december: "ديسمبر"
+    },
+    timeSlots: {
+      morning: "صباحاً",
+      afternoon: "ظهراً",
+      evening: "مساءً"
+    },
+    status: {
+      pending: "قيد الانتظار",
+      accepted: "مقبول",
+      declined: "مرفوض",
+      cancelled: "ملغي"
     }
   },
   appointmentRequests: {
@@ -83,7 +135,9 @@ export default {
     subtitle: "إدارة طلبات المواعيد المعلقة",
     noRequests: "لا توجد طلبات مواعيد معلقة",
     accept: "قبول",
-    decline: "رفض"
+    decline: "رفض",
+    note: "ملاحظة المريض",
+    viewNote: "عرض الملاحظة"
   },
   tableauDeBord: {
     dashboard: 'لوحة التحكم',
@@ -132,5 +186,44 @@ export default {
     loginError: "بيانات الدخول غير صحيحة",
     requiredFields: "جميع الحقول مطلوبة",
     noAccount: "ليس لديك حساب؟",
+  },
+  announcements: {
+    title: "الإعلانات",
+    subtitle: "إدارة ونشر إعلاناتك",
+    addButton: "إضافة إعلان",
+    noAnnouncements: "لا توجد إعلانات حالياً",
+    addAnnouncementHint: "انقر على \"إضافة إعلان\" للبدء",
+    addModal: {
+      title: "إضافة إعلان",
+      titleLabel: "عنوان الإعلان",
+      titlePlaceholder: "عنوان الإعلان",
+      contentLabel: "المحتوى",
+      contentPlaceholder: "محتوى الإعلان",
+      photoLabel: "صورة (اختياري)",
+      addPhoto: "إضافة صورة",
+      removePhoto: "حذف الصورة",
+      cancel: "إلغاء",
+      publish: "نشر",
+      update: "تحديث"
+    },
+    deleteModal: {
+      title: "حذف الإعلان",
+      confirmation: "هل أنت متأكد أنك تريد حذف الإعلان \"{{title}}\"؟",
+      warning: "هذا الإجراء لا يمكن التراجع عنه.",
+      cancel: "إلغاء",
+      delete: "حذف"
+    },
+    card: {
+      delete: "حذف"
+    }
+  },
+  roles: {
+    doctor: "طبيب",
+    patient: "مريض",
+    cardiologist: "طبيب قلب",
+    dermatologist: "طبيب جلدية",
+    ophthalmologist: "طبيب عيون",
+    gynecologist: "طبيب نساء",
+    pediatrician: "طبيب أطفال"
   },
 }; 

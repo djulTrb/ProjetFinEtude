@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Plus } from "phosphor-react";
+import { useTranslation } from "react-i18next";
 import { initialAnnouncements } from "./announcements/utils";
 import AnnouncementCard from "./announcements/AnnouncementCard";
 import { AddModal, DeleteModal } from "./announcements/AnnouncementModals";
 
 export default function Annonces() {
+  const { t } = useTranslation();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
@@ -63,10 +65,10 @@ export default function Annonces() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">
-            Annonces
+            {t('announcements.title')}
           </h1>
           <p className="text-gray-500 text-sm sm:text-base">
-            Gérez et publiez vos annonces
+            {t('announcements.subtitle')}
           </p>
         </div>
         <button
@@ -74,7 +76,7 @@ export default function Annonces() {
           className="flex items-center gap-2 px-4 py-2.5 border bg-stone-200 bg-opacity-50 border-stone-300 text-blue-500 font-bold rounded-xl text-sm font-medium w-full sm:w-auto justify-center sm:justify-start"
         >
           <Plus weight="bold" className="text-lg" />
-          <span>Ajouter une annonce</span>
+          <span>{t('announcements.addButton')}</span>
         </button>
       </div>
 
@@ -82,8 +84,8 @@ export default function Annonces() {
       <div className="grid gap-4 sm:gap-6">
         {announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-gray-500 text-lg">Aucune annonce pour le moment</p>
-            <p className="text-gray-400 text-sm mt-2">Cliquez sur "Ajouter une annonce" pour commencer</p>
+            <p className="text-gray-500 text-lg">{t('announcements.noAnnouncements')}</p>
+            <p className="text-gray-400 text-sm mt-2">{t('announcements.addAnnouncementHint')}</p>
           </div>
         ) : (
           announcements.map((announcement) => (

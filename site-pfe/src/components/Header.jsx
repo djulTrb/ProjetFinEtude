@@ -40,7 +40,7 @@ export default function Header({ onShowNotifications }) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-800">{t('common.greeting')}, {user.name}</p>
-              <p className="text-sm text-gray-600">{user.role}</p>
+              <p className="text-sm text-gray-600">{t(`roles.${user.role.toLowerCase()}`)}</p>
             </div>
           </div>
 

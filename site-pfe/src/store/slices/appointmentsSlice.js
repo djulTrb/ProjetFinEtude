@@ -4,7 +4,7 @@ const initialState = {
   appointments: [],
   blockedTimes: {
     days: [], // Array of blocked full days
-    hours: [], // Array of blocked specific hours {date: string, hour: number}
+    hours: [], // Array of blocked specific hours {date: string, hour: number, minutes: number}
   },
   loading: false,
   error: null,
@@ -38,18 +38,22 @@ export const appointmentsSlice = createSlice({
       state.blockedTimes.days = state.blockedTimes.days.filter(day => day !== action.payload);
     },
     blockHour: (state, action) => {
-      const { date, hour } = action.payload;
+      const { date, hour, minutes } = action.payload;
       const existingBlock = state.blockedTimes.hours.find(
-        block => block.date === date && block.hour === hour
+        block => block.date === date && 
+                block.hour === hour && 
+                block.minutes === minutes
       );
       if (!existingBlock) {
-        state.blockedTimes.hours.push({ date, hour });
+        state.blockedTimes.hours.push({ date, hour, minutes });
       }
     },
     unblockHour: (state, action) => {
-      const { date, hour } = action.payload;
+      const { date, hour, minutes } = action.payload;
       state.blockedTimes.hours = state.blockedTimes.hours.filter(
-        block => !(block.date === date && block.hour === hour)
+        block => !(block.date === date && 
+                  block.hour === hour && 
+                  block.minutes === minutes)
       );
     },
     setLoading: (state, action) => {

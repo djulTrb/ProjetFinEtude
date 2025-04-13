@@ -5,6 +5,7 @@ export default {
     empty: "vide pour le moment",
     noAppointments: "vous n'avez aucun rendez-vous prévu",
     close: "Fermer",
+    cancel: "Annuler",
   },
   nav: {
     home: "Accueil",
@@ -121,13 +122,29 @@ export default {
     timeSlots: {
       morning: "Matin",
       afternoon: "Après-midi",
-      evening: "Soir"
+      evening: "Soir",
+      title: "Créneaux horaires"
     },
     status: {
       pending: "En attente",
       accepted: "Accepté",
       declined: "Refusé",
       cancelled: "Annulé"
+    },
+    hasAppointment: "Rendez-vous",
+    blocked: "Bloqué",
+    available: "Disponible",
+    form: {
+      firstName: "Prénom",
+      lastName: "Nom",
+      phone: "Téléphone",
+      email: "Email",
+      optional: "facultatif",
+      appointmentType: "Motif du rendez-vous",
+      note: "Note pour le médecin",
+      submit: "Demander un rendez-vous",
+      confirmationTitle: "Demande envoyée",
+      confirmationMessage: "Votre demande a bien été envoyée. Vous recevrez une réponse du médecin prochainement."
     }
   },
   appointmentRequests: {

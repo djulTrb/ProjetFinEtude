@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Calendar, CaretLeft, CaretRight, Clock, Check, X, Plus, Lock, LockOpen } from 'phosphor-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isSameHour, setHours, getHours, addDays } from 'date-fns';
+import { Calendar, CaretLeft, CaretRight, Clock, Check, X, Plus, Lock, LockOpen, User, Note, List } from 'phosphor-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isSameHour, setHours, getHours, addDays, getMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { blockDay, unblockDay, blockHour, unblockHour } from '../store/slices/appointmentsSlice';
+import { setSidebarOpen } from '../store/slices/sidebarSlice';
 
 // Mock data for appointments - in a real app, this would come from an API
 const mockAppointments = [
@@ -34,13 +35,21 @@ const mockAppointments = [
   }
 ];
 
-// Generate hourly slots from 8 AM to 6 PM
-const generateHourlySlots = () => {
+// Generate time slots from 8 AM to 6 PM with 30-minute intervals
+const generateTimeSlots = () => {
   const slots = [];
   for (let hour = 8; hour <= 18; hour++) {
-    slots.push(hour);
+    slots.push({ hour, minutes: 0 });
+    if (hour !== 18) { // Don't add :30 for the last hour
+      slots.push({ hour, minutes: 30 });
+    }
   }
   return slots;
+};
+
+// Format time slot for display
+const formatTimeSlot = (slot) => {
+  return `${String(slot.hour).padStart(2, '0')}:${String(slot.minutes).padStart(2, '0')}`;
 };
 
 export default function Agenda() {
@@ -48,23 +57,85 @@ export default function Agenda() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user);
   const { blockedTimes } = useSelector((state) => state.appointments);
+  const isOpen = useSelector((state) => state.sidebar.isOpen);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appointments, setAppointments] = useState(mockAppointments);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedHour, setSelectedHour] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const hourlySlots = generateHourlySlots();
+  const [isStacked, setIsStacked] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 800);
+  const timeSlots = generateTimeSlots();
   const minAppointmentDate = addDays(new Date(), 2); // Minimum date is 2 days from now
+  
+  // Form state for appointment request
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    appointmentType: 'consultation',
+    note: ''
+  });
+
+  // Check if a time slot is blocked
+  const isTimeSlotBlocked = (date, timeSlot) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return blockedTimes.hours.some(
+      block => block.date === formattedDate && 
+      block.hour === timeSlot.hour && 
+      block.minutes === timeSlot.minutes
+    ) || blockedTimes.days.includes(formattedDate);
+  };
+
+  // Get appointments for a specific time slot
+  const getAppointmentsForTimeSlot = (date, timeSlot) => {
+    return appointments.filter(appointment => {
+      const appointmentDate = parseISO(appointment.date);
+      return isSameDay(appointmentDate, date) && 
+             getHours(appointmentDate) === timeSlot.hour &&
+             getMinutes(appointmentDate) === timeSlot.minutes &&
+             appointment.status !== 'declined';
+    });
+  };
+
+  // Handle blocking/unblocking a time slot
+  const handleTimeSlotBlock = (date, timeSlot) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    if (isTimeSlotBlocked(date, timeSlot)) {
+      dispatch(unblockHour({ 
+        date: formattedDate, 
+        hour: timeSlot.hour,
+        minutes: timeSlot.minutes 
+      }));
+    } else {
+      // Don't block if there's an appointment
+      const hasAppointment = getAppointmentsForTimeSlot(date, timeSlot).length > 0;
+      if (!hasAppointment) {
+        dispatch(blockHour({ 
+          date: formattedDate, 
+          hour: timeSlot.hour,
+          minutes: timeSlot.minutes
+        }));
+      }
+    }
+  };
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
+      setIsStacked(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth >= 800);
     };
 
     window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -133,7 +204,71 @@ export default function Agenda() {
     
     if (date >= today && date <= maxDate) {
       setSelectedDate(date);
+      
+      // If user is a doctor, show the block modal
+      if (user.role.toLowerCase() === 'doctor') {
+        setShowBlockModal(true);
+      }
     }
+  };
+
+  // Handle hour selection
+  const handleHourClick = (hour) => {
+    if (!selectedDate) return;
+    
+    const isBlocked = isHourBlocked(selectedDate, hour);
+    const hasAppointment = getAppointmentsForHour(selectedDate, hour).length > 0;
+    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
+    
+    // Only allow selecting available hours and when the day is not blocked
+    if (!isBlocked && !hasAppointment && !isDayBlocked) {
+      setSelectedHour(hour);
+      
+      // If user is a patient, show the appointment form
+      if (user.role.toLowerCase() === 'patient') {
+        setShowAppointmentForm(true);
+      }
+    }
+  };
+
+  // Handle form input change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle form submission
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    
+    // In a real app, this would dispatch an action to create an appointment
+    console.log('Appointment request submitted:', {
+      ...formData,
+      date: selectedDate,
+      hour: selectedHour
+    });
+    
+    // Show confirmation message
+    setShowConfirmation(true);
+    
+    // Reset form and close modal after 3 seconds
+    setTimeout(() => {
+      setFormData({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        appointmentType: 'consultation',
+        note: ''
+      });
+      setShowAppointmentForm(false);
+      setShowConfirmation(false);
+      setSelectedHour(null);
+      setSelectedDate(null);
+    }, 3000);
   };
 
   // Format time for display
@@ -183,9 +318,11 @@ export default function Agenda() {
 
   // Check if an hour is blocked
   const isHourBlocked = (date, hour) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    // Check if either the specific hour is blocked OR the entire day is blocked
     return blockedTimes.hours.some(
-      block => block.date === format(date, 'yyyy-MM-dd') && block.hour === hour
-    );
+      block => block.date === formattedDate && block.hour === hour
+    ) || blockedTimes.days.includes(formattedDate);
   };
 
   // Handle blocking/unblocking a day
@@ -193,6 +330,12 @@ export default function Agenda() {
     const formattedDate = format(date, 'yyyy-MM-dd');
     if (isDayBlocked(date)) {
       dispatch(unblockDay(formattedDate));
+      // Dispatch an action to clear any individual hour blocks for that day
+      blockedTimes.hours.forEach(block => {
+        if (block.date === formattedDate) {
+          dispatch(unblockHour({ date: formattedDate, hour: block.hour }));
+        }
+      });
     } else {
       dispatch(blockDay(formattedDate));
     }
@@ -215,9 +358,9 @@ export default function Agenda() {
     const firstDayIndex = firstDayOfMonth.getDay();
     
     return (
-      <div className="grid grid-cols-7 gap-1 overflow-x-auto">
+      <div className={`grid ${isStacked ? 'grid-cols-1' : 'grid-cols-7'} gap-1 overflow-x-auto`}>
         {/* Day headers */}
-        {days.map((day, index) => (
+        {!isStacked && days.map((day, index) => (
           <div key={day} className="text-center font-medium text-gray-600 py-2 text-xs sm:text-sm">
             {isMobile ? getDayName(new Date(firstDayOfMonth.getTime() + index * 24 * 60 * 60 * 1000), true) : t(`agenda.days.${day}`)}
           </div>
@@ -230,6 +373,7 @@ export default function Agenda() {
           const isPast = day < minAppointmentDate;
           const isFuture = day > new Date(new Date().setMonth(new Date().getMonth() + 3));
           const isBlocked = isDayBlocked(day);
+          const isAvailable = !isPast && !isFuture && !isBlocked;
           
           return (
             <div 
@@ -237,26 +381,35 @@ export default function Agenda() {
               onClick={() => handleDateClick(day)}
               className={`
                 min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 border rounded-lg relative
-                ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}
+                ${isToday ? 'bg-blue-50 border-blue-200' : 'border-gray-200'}
                 ${!isSameMonth(day, currentDate) ? 'opacity-50' : ''}
-                ${isPast ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}
-                ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}
+                ${isPast ? 'opacity-50 cursor-not-allowed bg-red-50/30' : 'cursor-pointer'}
+                ${isFuture ? 'opacity-50 cursor-not-allowed bg-red-50/30' : ''}
                 ${isBlocked ? 'bg-red-50' : ''}
+                ${isAvailable ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'}
+                ${isStacked ? 'mb-2' : ''}
               `}
             >
               <div className="flex justify-between items-start">
+                <div className="flex items-center">
                 <span className={`font-medium text-xs sm:text-sm ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                   {format(day, 'd')}
                 </span>
+                  {isStacked && (
+                    <span className="ml-2 text-xs text-gray-500">
+                      {getDayName(day, isMobile)}
+                    </span>
+                  )}
+                </div>
                 {user.role.toLowerCase() === 'doctor' && !isPast && !isFuture && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDayBlock(day);
                     }}
-                    className={`p-1 rounded-full ${isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-gray-400 hover:bg-gray-100'}`}
+                    className={`p-1.5 rounded-full ${isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'}`}
                   >
-                    {isBlocked ? <Lock size={14} /> : <LockOpen size={14} />}
+                    {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
                   </button>
                 )}
               </div>
@@ -283,39 +436,288 @@ export default function Agenda() {
     );
   };
 
-  // Block Modal
+  // Block Modal for doctors
   const renderBlockModal = () => {
     if (!selectedDate) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-bold mb-4">Manage Time Blocks</h3>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="bg-white rounded-lg shadow-xl w-[95vw] h-[90vh] max-w-6xl flex flex-col">
+          <div className="p-4 sm:p-6 border-b">
+            <h3 className="text-lg sm:text-xl font-bold">
+              {t('agenda.timeSlots.title')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)}
+            </h3>
+          </div>
           
-          <div className="space-y-4">
-            {hourlySlots.map(hour => {
-              const isBlocked = isHourBlocked(selectedDate, hour);
-              return (
-                <div key={hour} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium">
-                    {`${hour}:00 - ${hour + 1}:00`}
-                  </span>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {timeSlots.map((timeSlot, index) => {
+                const isBlocked = isTimeSlotBlocked(selectedDate, timeSlot);
+                const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
+                return (
+                  <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
+                    hasAppointment ? 'bg-blue-50' : isBlocked ? 'bg-red-50' : 'bg-green-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {formatTimeSlot(timeSlot)}
+                      </span>
+                      {hasAppointment && (
+                        <span className="text-xs text-blue-600">
+                          {t('agenda.hasAppointment')}
+                        </span>
+                      )}
+                    </div>
+                    {user.role.toLowerCase() === 'doctor' && !hasAppointment && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTimeSlotBlock(selectedDate, timeSlot);
+                        }}
+                        className={`p-2 rounded-full ${
+                          isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'
+                        }`}
+                      >
+                        {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="p-4 sm:p-6 border-t flex justify-end">
+            <button 
+              onClick={() => {
+                setShowBlockModal(false);
+                setSelectedDate(null);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Appointment Form Modal for patients
+  const renderAppointmentForm = () => {
+    if (!selectedDate || !selectedHour) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-4 sm:p-6">
+          {!showConfirmation ? (
+            <>
+              <h3 className="text-lg sm:text-xl font-bold mb-4">
+                {t('agenda.newAppointment')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)} {selectedHour}:00
+              </h3>
+              
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('agenda.form.firstName')}
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('agenda.form.lastName')}
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('agenda.form.phone')}
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('agenda.form.email')} ({t('agenda.form.optional')})
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('agenda.form.appointmentType')}
+                  </label>
+                  <select
+                    name="appointmentType"
+                    value={formData.appointmentType}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="consultation">{t('agenda.appointmentTypes.consultation')}</option>
+                    <option value="follow-up">{t('agenda.appointmentTypes.follow-up')}</option>
+                    <option value="emergency">{t('agenda.appointmentTypes.emergency')}</option>
+                    <option value="other">{t('agenda.appointmentTypes.other')}</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('agenda.form.note')}
+                  </label>
+                  <textarea
+                    name="note"
+                    value={formData.note}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  ></textarea>
+                </div>
+                
+                <div className="flex justify-end space-x-3 pt-2">
                   <button
-                    onClick={() => handleHourBlock(selectedDate, hour)}
-                    className={`p-2 rounded-full ${
-                      isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-gray-400 hover:bg-gray-100'
+                    type="button"
+                    onClick={() => {
+                      setShowAppointmentForm(false);
+                      setSelectedHour(null);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {t('agenda.form.submit')}
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <div className="mb-4 text-green-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2">{t('agenda.form.confirmationTitle')}</h3>
+              <p className="text-gray-600">{t('agenda.form.confirmationMessage')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Time slots view for patients
+  const renderTimeSlotsView = () => {
+    if (!selectedDate) return null;
+
+    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
+    const timeSlots = generateTimeSlots();
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="bg-white rounded-lg shadow-xl w-[95vw] h-[90vh] max-w-6xl flex flex-col">
+          <div className="p-4 sm:p-6 border-b">
+            <h3 className="text-lg sm:text-xl font-bold">
+              {t('agenda.timeSlots.title')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)}
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {timeSlots.map((timeSlot, index) => {
+                const isBlocked = isDayBlocked || isTimeSlotBlocked(selectedDate, timeSlot);
+                const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
+                const isAvailable = !isBlocked && !hasAppointment;
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      hasAppointment ? 'bg-blue-50 cursor-not-allowed' : 
+                      isBlocked ? 'bg-red-50 cursor-not-allowed' : 
+                      'bg-green-50 cursor-pointer hover:bg-green-100'
                     }`}
                   >
-                    {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {formatTimeSlot(timeSlot)}
+                      </span>
+                      {hasAppointment && (
+                        <span className="text-xs text-blue-600">
+                          {t('agenda.hasAppointment')}
+                        </span>
+                      )}
+                      {isBlocked && (
+                        <span className="text-xs text-red-600">
+                          {t('agenda.blocked')}
+                        </span>
+                      )}
+                      {isAvailable && (
+                        <span className="text-xs text-green-600">
+                          {t('agenda.available')}
+                        </span>
+                      )}
+                    </div>
+                    {user.role.toLowerCase() === 'doctor' && !hasAppointment && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTimeSlotBlock(selectedDate, timeSlot);
+                        }}
+                        className={`p-2 rounded-full ${
+                          isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'
+                        }`}
+                      >
+                        {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
+                      </button>
+                    )}
                 </div>
               );
             })}
+            </div>
           </div>
           
-          <div className="mt-6 flex justify-end">
+          <div className="p-4 sm:p-6 border-t flex justify-end">
             <button 
-              onClick={() => setShowBlockModal(false)}
+              onClick={() => {
+                setSelectedDate(null);
+              }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
             >
               {t('common.close')}
@@ -330,7 +732,15 @@ export default function Agenda() {
     <div className="h-full flex flex-col">
       {/* Header with navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-white border-b">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">{t('agenda.title')}</h1>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => dispatch(setSidebarOpen(!isOpen))}
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            <List size={24} className="text-gray-600" />
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('agenda.title')}</h1>
+        </div>
         <div className="flex items-center space-x-2 sm:space-x-4">
           <button 
             onClick={goToPrevious}
@@ -355,8 +765,14 @@ export default function Agenda() {
         {renderMonthView()}
       </div>
 
-      {/* Block Modal */}
+      {/* Block Modal for doctors */}
       {showBlockModal && renderBlockModal()}
+
+      {/* Time slots view for patients */}
+      {selectedDate && user.role.toLowerCase() === 'patient' && !showAppointmentForm && renderTimeSlotsView()}
+
+      {/* Appointment Form Modal for patients */}
+      {showAppointmentForm && renderAppointmentForm()}
 
       {/* Appointment Modal */}
       {showAppointmentModal && selectedAppointment && (

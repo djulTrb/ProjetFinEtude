@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
+import { updateUser } from '../../store/slices/userSlice';
 import { User, Envelope, Lock, ArrowLeft, Key } from 'phosphor-react';
 import LanguageSwitch from './LanguageSwitch';
 
 export default function DoctorRegistration() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -45,6 +48,10 @@ export default function DoctorRegistration() {
     localStorage.setItem('userName', formData.fullName);
     localStorage.setItem('userEmail', formData.email);
     localStorage.setItem('clinicCode', formData.clinicCode);
+
+    // Update Redux store
+    dispatch(updateUser({ role: 'doctor' }));
+    
     navigate('/tableau-de-bord');
   };
 

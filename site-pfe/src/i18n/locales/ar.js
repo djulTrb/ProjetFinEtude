@@ -5,6 +5,7 @@ export default {
     empty: "فارغ حالياً",
     noAppointments: "ليس لديك مواعيد مجدولة",
     close: "إغلاق",
+    cancel: "إلغاء",
   },
   nav: {
     home: "الرئيسية",
@@ -121,13 +122,29 @@ export default {
     timeSlots: {
       morning: "صباحاً",
       afternoon: "ظهراً",
-      evening: "مساءً"
+      evening: "مساءً",
+      title: "المواعيد المتاحة"
     },
     status: {
       pending: "قيد الانتظار",
       accepted: "مقبول",
       declined: "مرفوض",
       cancelled: "ملغي"
+    },
+    hasAppointment: "موعد",
+    blocked: "مغلق",
+    available: "متاح",
+    form: {
+      firstName: "الاسم الأول",
+      lastName: "اسم العائلة",
+      phone: "رقم الهاتف",
+      email: "البريد الإلكتروني",
+      optional: "اختياري",
+      appointmentType: "نوع الموعد",
+      note: "ملاحظة للطبيب",
+      submit: "طلب موعد",
+      confirmationTitle: "تم إرسال الطلب",
+      confirmationMessage: "تم إرسال طلبك بنجاح. سوف تتلقى رداً من الطبيب قريباً."
     }
   },
   appointmentRequests: {

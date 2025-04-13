@@ -139,9 +139,9 @@ export default function AppointmentRequests() {
 
                 {/* Appointment type flag, note icon, and action buttons in a row */}
                 <div className="w-full sm:w-2/4 flex flex-row justify-self-end items-center">
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center flex-1 sm:-translate-x-8">
                     {/* Appointment type flag */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 ">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${getAppointmentTypeColor(request.type)}`}>
                         {t(`agenda.appointmentTypes.${request.type}`)}
                       </span>

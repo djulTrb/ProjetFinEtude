@@ -42,13 +42,48 @@ export default function Sidebar() {
   }, []);
 
   const navItems = [
-    { path: "/", icon: House, label: t('tableauDeBord.dashboard') },
-    { path: "/annonces", icon: Megaphone, label: t('nav.announcements') },
-    { path: "/messagerie", icon: ChatCircle, label: t('nav.messages') },
-    { path: "/agenda", icon: Calendar, label: t('nav.calendar') },
-    { path: "/demandes-rdv", icon: Bell, label: t('appointmentRequests.title') },
-    { path: "/parametres", icon: Gear, label: t('settings.title') },
+    { 
+      path: "/", 
+      icon: House, 
+      label: t('tableauDeBord.dashboard'),
+      roles: ['doctor']
+    },
+    { 
+      path: "/annonces", 
+      icon: Megaphone, 
+      label: t('nav.announcements'),
+      roles: ['doctor', 'patient']
+    },
+    { 
+      path: "/messagerie", 
+      icon: ChatCircle, 
+      label: t('nav.messages'),
+      roles: ['doctor', 'patient']
+    },
+    { 
+      path: "/agenda", 
+      icon: Calendar, 
+      label: t('nav.calendar'),
+      roles: ['doctor', 'patient']
+    },
+    { 
+      path: "/demandes-rdv", 
+      icon: Bell, 
+      label: t('appointmentRequests.title'),
+      roles: ['doctor']
+    },
+    { 
+      path: "/parametres", 
+      icon: Gear, 
+      label: t('settings.title'),
+      roles: ['doctor', 'patient']
+    },
   ];
+
+  // Filter items based on user role
+  const filteredNavItems = navItems.filter(item => 
+    item.roles.includes(user.role.toLowerCase())
+  );
 
   // For mobile, render a full overlay
   if (isMobile) {
@@ -105,7 +140,7 @@ export default function Sidebar() {
               
               <div className="flex flex-col h-full">
                 <div className="flex-1 py-2">
-                  {navItems.map((item) => {
+                  {filteredNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
 
@@ -184,7 +219,7 @@ export default function Sidebar() {
 
       <div className="flex flex-col h-full">
         <div className="flex-1 py-4">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 

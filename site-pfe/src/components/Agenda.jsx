@@ -732,15 +732,10 @@ export default function Agenda() {
     <div className="h-full flex flex-col">
       {/* Header with navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-white border-b">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => dispatch(setSidebarOpen(!isOpen))}
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <List size={24} className="text-gray-600" />
-          </button>
+        
+         
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('agenda.title')}</h1>
-        </div>
+        
         <div className="flex items-center space-x-2 sm:space-x-4">
           <button 
             onClick={goToPrevious}

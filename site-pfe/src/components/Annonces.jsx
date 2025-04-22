@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next";
 import { initialAnnouncements } from "./announcements/utils";
 import AnnouncementCard from "./announcements/AnnouncementCard";
 import { AddModal, DeleteModal } from "./announcements/AnnouncementModals";
+import { useSelector } from "react-redux";
 
 export default function Annonces() {
   const { t } = useTranslation();
+  const user = useSelector((state) => state.user);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
@@ -17,6 +19,11 @@ export default function Annonces() {
     image: null,
   });
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Filter announcements based on user role
+  const filteredAnnouncements = user.role.toLowerCase() === 'patient' 
+    ? announcements.filter(announcement => announcement.author.toLowerCase().includes('dr.'))
+    : announcements;
 
   const handleDelete = (id) => {
     setSelectedAnnouncement(announcements.find((a) => a.id === id));
@@ -71,51 +78,59 @@ export default function Annonces() {
             {t('announcements.subtitle')}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 border bg-stone-200 bg-opacity-50 border-stone-300 text-blue-500 font-bold rounded-xl text-sm font-medium w-full sm:w-auto justify-center sm:justify-start"
-        >
-          <Plus weight="bold" className="text-lg" />
-          <span>{t('announcements.addButton')}</span>
-        </button>
+        {user.role.toLowerCase() === 'doctor' && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 border bg-stone-200 bg-opacity-50 border-stone-300 text-blue-500 font-bold rounded-xl text-sm font-medium w-full sm:w-auto justify-center sm:justify-start"
+          >
+            <Plus weight="bold" className="text-lg" />
+            <span>{t('announcements.addButton')}</span>
+          </button>
+        )}
       </div>
 
       {/* Announcements List */}
       <div className="grid gap-4 sm:gap-6">
-        {announcements.length === 0 ? (
+        {filteredAnnouncements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-gray-500 text-lg">{t('announcements.noAnnouncements')}</p>
-            <p className="text-gray-400 text-sm mt-2">{t('announcements.addAnnouncementHint')}</p>
+            {user.role.toLowerCase() === 'doctor' && (
+              <p className="text-gray-400 text-sm mt-2">{t('announcements.addAnnouncementHint')}</p>
+            )}
           </div>
         ) : (
-          announcements.map((announcement) => (
+          filteredAnnouncements.map((announcement) => (
             <AnnouncementCard
               key={announcement.id}
               announcement={announcement}
-              onDelete={handleDelete}
+              onDelete={user.role.toLowerCase() === 'doctor' ? handleDelete : undefined}
             />
           ))
         )}
       </div>
 
       {/* Modals */}
-      <AddModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        newAnnouncement={newAnnouncement}
-        setNewAnnouncement={setNewAnnouncement}
-        imagePreview={imagePreview}
-        setImagePreview={setImagePreview}
-        handleImageChange={handleImageChange}
-        handleAdd={handleAdd}
-      />
+      {user.role.toLowerCase() === 'doctor' && (
+        <>
+          <AddModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            newAnnouncement={newAnnouncement}
+            setNewAnnouncement={setNewAnnouncement}
+            imagePreview={imagePreview}
+            setImagePreview={setImagePreview}
+            handleImageChange={handleImageChange}
+            handleAdd={handleAdd}
+          />
 
-      <DeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        announcement={selectedAnnouncement}
-      />
+          <DeleteModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={confirmDelete}
+            announcement={selectedAnnouncement}
+          />
+        </>
+      )}
     </div>
   );
 }

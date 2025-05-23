@@ -68,6 +68,8 @@ export default function Agenda() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
+  const [activeAppointment, setActiveAppointment] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isStacked, setIsStacked] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 800);
@@ -242,12 +244,20 @@ export default function Agenda() {
   const handleFormSubmit = (e) => {
     e.preventDefault();
     
-    // In a real app, this would dispatch an action to create an appointment
-    console.log('Appointment request submitted:', {
-      ...formData,
-      date: selectedDate,
-      hour: selectedHour
-    });
+    // Create new appointment object
+    const newAppointment = {
+      id: Date.now(), // Using timestamp as temporary ID
+      date: format(selectedDate, 'yyyy-MM-dd'),
+      time: `${selectedHour}:00`,
+      phone: formData.phone,
+      type: formData.appointmentType,
+      note: formData.note,
+      status: 'pending' // Make sure this matches exactly with the translation key
+    };
+    
+    // Set active appointment
+    setActiveAppointment(newAppointment);
+    setHasActiveAppointment(true);
     
     // Show confirmation message
     setShowConfirmation(true);
@@ -264,6 +274,26 @@ export default function Agenda() {
       setSelectedHour(null);
       setSelectedDate(null);
     }, 3000);
+  };
+
+  // Handle appointment modification
+  const handleModifyAppointment = () => {
+    setHasActiveAppointment(false);
+    setActiveAppointment(null);
+    // Reset to calendar view
+  };
+
+  // Handle appointment modification
+  const handleChangeAppointment = () => {
+    setHasActiveAppointment(false);
+    setActiveAppointment(null);
+  };
+
+  // Handle appointment deletion
+  const handleDeleteAppointment = () => {
+    setHasActiveAppointment(false);
+    setActiveAppointment(null);
+    // Reset to calendar view
   };
 
   // Format time for display
@@ -319,7 +349,7 @@ export default function Agenda() {
       block => block.date === formattedDate && block.hour === hour
     ) || blockedTimes.days.includes(formattedDate);
   };
-
+ 
   // Handle blocking/unblocking a day
   const handleDayBlock = (date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
@@ -700,94 +730,131 @@ export default function Agenda() {
     );
   };
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Header with navigation */}
-      <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-white border-b">
-        
-         
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('agenda.title')}</h1>
-        
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <button 
-            onClick={goToPrevious}
-            className="p-1 sm:p-2 rounded-full hover:bg-gray-100"
-          >
-            <CaretLeft size={20} />
-          </button>
-          <h2 className="text-lg sm:text-xl font-semibold text-center">
-            {getMonthName(currentDate)}
-          </h2>
-          <button 
-            onClick={goToNext}
-            className="p-1 sm:p-2 rounded-full hover:bg-gray-100"
-          >
-            <CaretRight size={20} />
-          </button>
-        </div>
-      </div>
+  // Render appointment management view
+  const renderAppointmentManagement = () => {
+    if (!hasActiveAppointment || !activeAppointment) return null;
 
-      {/* Calendar content */}
-      <div className="flex-1 p-2 sm:p-4 overflow-auto">
-        {renderMonthView()}
-      </div>
-
-      {/* Block Modal for doctors */}
-      {showBlockModal && renderBlockModal()}
-
-      {/* Time slots view for patients */}
-      {selectedDate && user.role.toLowerCase() === 'patient' && !showAppointmentForm && renderTimeSlotsView()}
-
-      {/* Appointment Form Modal for patients */}
-      {showAppointmentForm && renderAppointmentForm()}
-
-      {/* Appointment Modal */}
-      {showAppointmentModal && selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">{t('agenda.appointmentDetails')}</h3>
-            
-            <div className="space-y-3 sm:space-y-4">
-              <div>
-                <p className="text-xs sm:text-sm text-gray-500">{t('agenda.patient')}</p>
-                <p className="font-medium text-sm sm:text-base">{selectedAppointment.patientName}</p>
-              </div>
-              
-              <div>
-                <p className="text-xs sm:text-sm text-gray-500">{t('agenda.date')}</p>
-                <p className="font-medium text-sm sm:text-base">
-                  {`${getDayName(parseISO(selectedAppointment.date))} ${format(parseISO(selectedAppointment.date), 'd')} ${getMonthName(parseISO(selectedAppointment.date))} ${format(parseISO(selectedAppointment.date), 'yyyy')}`}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-xs sm:text-sm text-gray-500">{t('agenda.time')}</p>
-                <p className="font-medium text-sm sm:text-base">{formatAppointmentTime(selectedAppointment.date)}</p>
-              </div>
-              
-              <div>
-                <p className="text-xs sm:text-sm text-gray-500">{t('agenda.type')}</p>
-                <p className="font-medium text-sm sm:text-base capitalize">{t(`agenda.appointmentTypes.${selectedAppointment.type}`)}</p>
-              </div>
-              
-              <div>
-                <p className="text-xs sm:text-sm text-gray-500">{t('agenda.status')}</p>
-                <p className={`font-medium text-sm sm:text-base capitalize ${getStatusColor(selectedAppointment.status)} inline-block px-2 py-1 rounded`}>
-                  {getStatusText(selectedAppointment.status)}
-                </p>
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <h2 className="text-2xl font-bold text-center mb-6">{t('agenda.manageAppointment')}</h2>
+          
+          <div className="space-y-4 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">{t('agenda.appointmentDetails')}</h3>
+              <div className="space-y-2">
+                <p><span className="font-medium">{t('agenda.date')}:</span> {activeAppointment.date}</p>
+                <p><span className="font-medium">{t('agenda.time')}:</span> {activeAppointment.time}</p>
+                <p><span className="font-medium">{t('agenda.type')}:</span> {t(`agenda.appointmentTypes.${activeAppointment.type}`)}</p>
+                <p><span className="font-medium">{t('agenda.statusType')}:</span> {getStatusText(activeAppointment.status)}</p>
               </div>
             </div>
-            
-            <div className="mt-4 sm:mt-6 flex justify-end">
+          </div>
+
+          <div className="flex flex-col space-y-3">
+            <button
+              onClick={handleChangeAppointment}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {t('agenda.modifyAppointment')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      {hasActiveAppointment ? (
+        renderAppointmentManagement()
+      ) : (
+        <>
+          {/* Header with navigation */}
+          <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-white border-b">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('agenda.title')}</h1>
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button 
-                onClick={() => setShowAppointmentModal(false)}
-                className="px-3 sm:px-4 py-1 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
+                onClick={goToPrevious}
+                className="p-1 sm:p-2 rounded-full hover:bg-gray-100"
               >
-                {t('common.close')}
+                <CaretLeft size={20} />
+              </button>
+              <h2 className="text-lg sm:text-xl font-semibold text-center">
+                {getMonthName(currentDate)}
+              </h2>
+              <button 
+                onClick={goToNext}
+                className="p-1 sm:p-2 rounded-full hover:bg-gray-100"
+              >
+                <CaretRight size={20} />
               </button>
             </div>
           </div>
-        </div>
+
+          {/* Calendar content */}
+          <div className="flex-1 p-2 sm:p-4 overflow-auto">
+            {renderMonthView()}
+          </div>
+
+          {/* Block Modal for doctors */}
+          {showBlockModal && renderBlockModal()}
+
+          {/* Time slots view for patients */}
+          {selectedDate && user.role.toLowerCase() === 'patient' && !showAppointmentForm && renderTimeSlotsView()}
+
+          {/* Appointment Form Modal for patients */}
+          {showAppointmentForm && renderAppointmentForm()}
+
+          {/* Appointment Modal */}
+          {showAppointmentModal && selectedAppointment && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">{t('agenda.appointmentDetails')}</h3>
+                
+                <div className="space-y-3 sm:space-y-4">
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('agenda.patient')}</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedAppointment.patientName}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('agenda.date')}</p>
+                    <p className="font-medium text-sm sm:text-base">
+                      {`${getDayName(parseISO(selectedAppointment.date))} ${format(parseISO(selectedAppointment.date), 'd')} ${getMonthName(parseISO(selectedAppointment.date))} ${format(parseISO(selectedAppointment.date), 'yyyy')}`}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('agenda.time')}</p>
+                    <p className="font-medium text-sm sm:text-base">{formatAppointmentTime(selectedAppointment.date)}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('agenda.type')}</p>
+                    <p className="font-medium text-sm sm:text-base capitalize">{t(`agenda.appointmentTypes.${selectedAppointment.type}`)}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-500">{t('agenda.status')}</p>
+                    <p className={`font-medium text-sm sm:text-base capitalize ${getStatusColor(selectedAppointment.status)} inline-block px-2 py-1 rounded`}>
+                      {getStatusText(selectedAppointment.status)}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 sm:mt-6 flex justify-end">
+                  <button 
+                    onClick={() => setShowAppointmentModal(false)}
+                    className="px-3 sm:px-4 py-1 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
+                  >
+                    {t('common.close')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

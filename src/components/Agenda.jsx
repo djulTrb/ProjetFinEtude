@@ -6,6 +6,8 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { fr } from 'date-fns/locale';
 import { blockDay, unblockDay, blockHour, unblockHour } from '../store/slices/appointmentsSlice';
 import { setSidebarOpen } from '../store/slices/sidebarSlice';
+import { supabase } from '../lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 // Mock data for appointments - in a real app, this would come from an API
 const mockAppointments = [
@@ -241,39 +243,73 @@ export default function Agenda() {
   };
 
   // Handle form submission
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     
-    // Create new appointment object
-    const newAppointment = {
-      id: Date.now(), // Using timestamp as temporary ID
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      time: `${selectedHour}:00`,
-      phone: formData.phone,
-      type: formData.appointmentType,
-      note: formData.note,
-      status: 'pending' // Make sure this matches exactly with the translation key
-    };
-    
-    // Set active appointment
-    setActiveAppointment(newAppointment);
-    setHasActiveAppointment(true);
-    
-    // Show confirmation message
-    setShowConfirmation(true);
-    
-    // Reset form and close modal after 3 seconds
-    setTimeout(() => {
-      setFormData({
-        phone: '',
-        appointmentType: 'consultation',
-        note: ''
-      });
-      setShowAppointmentForm(false);
-      setShowConfirmation(false);
-      setSelectedHour(null);
-      setSelectedDate(null);
-    }, 3000);
+    try {
+      // Generate a unique ID for the appointment
+      const idRendezVous = uuidv4();
+      
+      // Get the current date components
+      const currentDate = new Date();
+      const selectedDateObj = new Date(selectedDate);
+      
+      // Create the appointment data object
+      const appointmentData = {
+        idUser: user.id,
+        idRendezVous: idRendezVous,
+        an: currentDate.getFullYear(),
+        mois: selectedDateObj.getMonth(),
+        jour: selectedDateObj.getDate(),
+        heure: selectedHour,
+        EtDemi: selectedMinutes === 30,
+        remarque: formData.note,
+        numTel: formData.phone,
+        typeRDV: formData.appointmentType
+      };
+
+      // Insert the appointment into Supabase
+      const { data, error } = await supabase
+        .from('listeRendezVous')
+        .insert([appointmentData]);
+
+      if (error) throw error;
+
+      // Create new appointment object for local state
+      const newAppointment = {
+        id: idRendezVous,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        time: `${selectedHour}:${selectedMinutes === 30 ? '30' : '00'}`,
+        phone: formData.phone,
+        type: formData.appointmentType,
+        note: formData.note,
+        status: 'pending'
+      };
+      
+      // Set active appointment
+      setActiveAppointment(newAppointment);
+      setHasActiveAppointment(true);
+      
+      // Show confirmation message
+      setShowConfirmation(true);
+      
+      // Reset form and close modal after 3 seconds
+      setTimeout(() => {
+        setFormData({
+          phone: '',
+          appointmentType: 'consultation',
+          note: ''
+        });
+        setShowAppointmentForm(false);
+        setShowConfirmation(false);
+        setSelectedHour(null);
+        setSelectedDate(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+      // Here you might want to show an error message to the user
+    }
   };
 
   // Handle appointment modification

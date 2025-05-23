@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { getMessages, formatTime, isToday, isYesterday, formatDate } from './utils';
-import { Paperclip, Image, PaperPlaneRight } from 'phosphor-react';
+import { Paperclip, Image, PaperPlaneRight, X } from 'phosphor-react';
 
 const DirectChat = () => {
   const { t } = useTranslation();
@@ -204,4 +204,4 @@ const DirectChat = () => {
   );
 };
 
-export default DirectChat; 
+export default DirectChat;

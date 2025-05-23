@@ -62,6 +62,7 @@ export default function Agenda() {
   const [appointments, setAppointments] = useState(mockAppointments);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedHour, setSelectedHour] = useState(null);
+  const [selectedMinutes, setSelectedMinutes] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -348,6 +349,26 @@ export default function Agenda() {
       dispatch(unblockHour({ date: formattedDate, hour }));
     } else {
       dispatch(blockHour({ date: formattedDate, hour }));
+    }
+  };
+
+  // Handle time slot click
+  const handleTimeSlotClick = (timeSlot) => {
+    if (!selectedDate) return;
+    
+    const isBlocked = isTimeSlotBlocked(selectedDate, timeSlot);
+    const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
+    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
+    
+    // Only allow selecting available hours and when the day is not blocked
+    if (!isBlocked && !hasAppointment && !isDayBlocked) {
+      setSelectedHour(timeSlot.hour);
+      setSelectedMinutes(timeSlot.minutes);
+      
+      // If user is a patient, show the appointment form
+      if (user.role.toLowerCase() === 'patient') {
+        setShowAppointmentForm(true);
+      }
     }
   };
 
@@ -668,6 +689,7 @@ export default function Agenda() {
                 return (
                   <div 
                     key={index}
+                    onClick={() => handleTimeSlotClick(timeSlot)}
                     className={`flex items-center justify-between p-3 rounded-lg ${
                       hasAppointment ? 'bg-blue-50 cursor-not-allowed' : 
                       isBlocked ? 'bg-red-50 cursor-not-allowed' : 
@@ -707,9 +729,9 @@ export default function Agenda() {
                         {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
                       </button>
                     )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
             </div>
           </div>
           

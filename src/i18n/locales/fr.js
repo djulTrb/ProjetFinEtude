@@ -142,10 +142,8 @@ export default {
       email: "Email",
       optional: "facultatif",
       appointmentType: "Motif du rendez-vous",
-      note: "Note pour le médecin",
-      submit: "Demander un rendez-vous",
-      confirmationTitle: "Demande envoyée",
-      confirmationMessage: "Votre demande a bien été envoyée. Vous recevrez une réponse du médecin prochainement."
+      note: "remarques pour le médecin",
+      submit: "Demander un rendez-vous"
     }
   },
   appointmentRequests: {

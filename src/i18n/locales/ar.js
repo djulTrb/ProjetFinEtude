@@ -143,9 +143,7 @@ export default {
       optional: "اختياري",
       appointmentType: "نوع الموعد",
       note: "ملاحظة للطبيب",
-      submit: "طلب موعد",
-      confirmationTitle: "تم إرسال الطلب",
-      confirmationMessage: "تم إرسال طلبك بنجاح. سوف تتلقى رداً من الطبيب قريباً."
+      submit: "طلب موعد"
     }
   },
   appointmentRequests: {

@@ -3,9 +3,17 @@ export default {
     greeting: "مرحباً",
     welcome: "مرحباً بك في مساحتك الشخصية",
     empty: "فارغ حالياً",
-    noAppointments: "ليس لديك مواعيد مجدولة",
+    noAppointments: "ليس لديك مواعيد مخططة",
     close: "إغلاق",
     cancel: "إلغاء",
+  },
+  validation: {
+    required: "هذا الحقل مطلوب",
+    phoneFormat: "يجب أن يحتوي رقم الهاتف على 10 أرقام",
+    maxLength: "الحد الأقصى {{length}} حرف",
+    email: "يرجى إدخال عنوان بريد إلكتروني صالح",
+    password: "يجب أن يحتوي كلمة المرور على 8 أحرف على الأقل",
+    confirmPassword: "كلمات المرور غير متطابقة"
   },
   nav: {
     home: "الرئيسية",

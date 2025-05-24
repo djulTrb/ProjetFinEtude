@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
 import { Calendar, CaretLeft, CaretRight, Clock, Check, X, Plus, Lock, LockOpen, User, Note, List } from 'phosphor-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isSameHour, setHours, getHours, addDays, getMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -78,11 +79,13 @@ export default function Agenda() {
   const timeSlots = generateTimeSlots();
   const minAppointmentDate = addDays(new Date(), 2); // Minimum date is 2 days from now
   
-  // Form state for appointment request
-  const [formData, setFormData] = useState({
-    phone: '',
-    appointmentType: 'consultation',
-    note: ''
+  // Form state using React Hook Form
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    defaultValues: {
+      phone: '',
+      appointmentType: 'consultation',
+      note: ''
+    }
   });
 
   // Check if a time slot is blocked
@@ -233,19 +236,8 @@ export default function Agenda() {
     }
   };
 
-  // Handle form input change
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   // Handle form submission
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    
+  const onSubmit = async (data) => {
     try {
       // Generate a unique ID for the appointment
       const idRendezVous = uuidv4();
@@ -256,23 +248,25 @@ export default function Agenda() {
       
       // Create the appointment data object
       const appointmentData = {
-        idUser: user.id,
         idRendezVous: idRendezVous,
+        idUser: user.id,
         an: currentDate.getFullYear(),
         mois: selectedDateObj.getMonth(),
         jour: selectedDateObj.getDate(),
         heure: selectedHour,
-        EtDemi: selectedMinutes === 30,
-        remarque: formData.note,
-        numTel: formData.phone,
-        typeRDV: formData.appointmentType
+        etDemi: selectedMinutes === 30,
+        remarque: data.note,
+        numTel: data.phone,
+        typeRDV: data.appointmentType,
+        statut: 'enAttente'
       };
 
       // Insert the appointment into Supabase
-      const { data, error } = await supabase
-        .from('listeRendezVous')
+      const { error } = await supabase
+        .from('listeDemandesRendezVous')
         .insert([appointmentData]);
 
+        console.log(error)
       if (error) throw error;
 
       // Create new appointment object for local state
@@ -280,9 +274,9 @@ export default function Agenda() {
         id: idRendezVous,
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: `${selectedHour}:${selectedMinutes === 30 ? '30' : '00'}`,
-        phone: formData.phone,
-        type: formData.appointmentType,
-        note: formData.note,
+        phone: data.phone,
+        type: data.appointmentType,
+        note: data.note,
         status: 'pending'
       };
       
@@ -290,16 +284,9 @@ export default function Agenda() {
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
       
-      // Show confirmation message
-      setShowConfirmation(true);
-      
       // Reset form and close modal after 3 seconds
       setTimeout(() => {
-        setFormData({
-          phone: '',
-          appointmentType: 'consultation',
-          note: ''
-        });
+        reset();
         setShowAppointmentForm(false);
         setShowConfirmation(false);
         setSelectedHour(null);
@@ -308,7 +295,6 @@ export default function Agenda() {
 
     } catch (error) {
       console.error('Error saving appointment:', error);
-      // Here you might want to show an error message to the user
     }
   };
 
@@ -591,77 +577,96 @@ export default function Agenda() {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-4 sm:p-6">
+          <h3 className="text-lg sm:text-xl font-bold mb-4">
+            {t('agenda.newAppointment')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)} {selectedHour}:00
+          </h3>
           
-              <h3 className="text-lg sm:text-xl font-bold mb-4">
-                {t('agenda.newAppointment')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)} {selectedHour}:00
-              </h3>
-              
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('agenda.form.phone')}
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('agenda.form.appointmentType')}
-                  </label>
-                  <select
-                    name="appointmentType"
-                    value={formData.appointmentType}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="consultation">{t('agenda.appointmentTypes.consultation')}</option>
-                    <option value="follow-up">{t('agenda.appointmentTypes.follow-up')}</option>
-                    <option value="emergency">{t('agenda.appointmentTypes.emergency')}</option>
-                    <option value="other">{t('agenda.appointmentTypes.other')}</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('agenda.form.note')}
-                  </label>
-                  <textarea
-                    name="note"
-                    value={formData.note}
-                    onChange={handleInputChange}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  ></textarea>
-                </div>
-                
-                <div className="flex justify-end space-x-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAppointmentForm(false);
-                      setSelectedHour(null);
-                    }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {t('agenda.form.submit')}
-                  </button>
-                </div>
-              </form>
-           
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agenda.form.phone')}
+              </label>
+              <input
+                type="tel"
+                {...register('phone', {
+                  required: t('validation.required'),
+                  pattern: {
+                    value: /^[0-9]{10}$/,
+                    message: t('validation.phoneFormat')
+                  }
+                })}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agenda.form.appointmentType')}
+              </label>
+              <select
+                {...register('appointmentType', {
+                  required: t('validation.required')
+                })}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.appointmentType ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="consultation">{t('agenda.appointmentTypes.consultation')}</option>
+                <option value="follow-up">{t('agenda.appointmentTypes.follow-up')}</option>
+                <option value="emergency">{t('agenda.appointmentTypes.emergency')}</option>
+                <option value="other">{t('agenda.appointmentTypes.other')}</option>
+              </select>
+              {errors.appointmentType && (
+                <p className="mt-1 text-sm text-red-600">{errors.appointmentType.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agenda.form.note')}
+              </label>
+              <textarea
+                {...register('note', {
+                  maxLength: {
+                    value: 500,
+                    message: t('validation.maxLength', { length: 500 })
+                  }
+                })}
+                rows={2}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.note ? 'border-red-500' : 'border-gray-300'
+                }`}
+              ></textarea>
+              {errors.note && (
+                <p className="mt-1 text-sm text-red-600">{errors.note.message}</p>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  setShowAppointmentForm(false);
+                  setSelectedHour(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                {t('agenda.form.submit')}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );

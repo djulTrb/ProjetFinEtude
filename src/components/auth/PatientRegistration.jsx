@@ -1,56 +1,88 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
-import { updateUser } from '../../store/slices/userSlice';
+import { useForm } from 'react-hook-form';
 import { User, Envelope, Lock, ArrowLeft } from 'phosphor-react';
+import { supabase } from '../../lib/supabase';
 import LanguageSwitch from './LanguageSwitch';
 
 export default function PatientRegistration() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    id: null,
+    email: null,
+    role: null,
+    avatar: null
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const password = watch('password');
+
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    setError('');
     
-    // Simple validation
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError(t('auth.requiredFields'));
-      return;
+    try {
+      // Sign up with Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signUpError) {
+        setError(t('auth.registrationError'));
+        return;
+      }
+
+      // Create user info in infoUtilisateur table
+      const { data: userData, error: userError } = await supabase
+        .from('infoUtilisateur')
+        .insert([
+          {
+            idUser: authData.user.id,
+            email: data.email,
+            role: 'patient',
+            full_name: data.fullName,
+            avatar: null
+          },
+        ])
+        .select()
+        .single();
+
+      if (userError) {
+        setError(t('auth.registrationError'));
+        return;
+      }
+
+      setSuccess(true);
+      
+      
+      setUserInfo({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role,
+        avatar: userData.avatar
+      });
+
+      setTimeout(() => {
+        navigate('/agenda');
+      }, 3000);
+
+    } catch (err) {
+      setError(t('auth.registrationError'));
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError(t('auth.passwordsDoNotMatch'));
-      return;
-    }
-    
-    // Set authentication and role
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('userRole', 'patient');
-    localStorage.setItem('userName', formData.fullName);
-    localStorage.setItem('userEmail', formData.email);
-
-    // Update Redux store
-    dispatch(updateUser({ role: 'patient' }));
-    
-    navigate('/agenda');
   };
 
   return (
@@ -58,23 +90,19 @@ export default function PatientRegistration() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8">
         <div className="flex justify-between items-center">
           <button
-            onClick={() => navigate('/inscription')}
-            className="flex items-center text-blue-600 hover:text-blue-500 transition-colors duration-200"
+            onClick={() => navigate(-1)}
+            className="text-gray-600 hover:text-gray-900"
           >
-            <ArrowLeft size={16} className="mr-1" />
-            {t('auth.back')}
+            <ArrowLeft size={24} />
           </button>
-          <LanguageSwitch />
-        </div>
-        
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-3xl font-extrabold text-gray-900">
             {t('auth.registerAsPatient')}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {t('auth.patientRegistrationMessage')}
-          </p>
+          <LanguageSwitch />
         </div>
+        <p className="text-center text-sm text-gray-600">
+          {t('auth.patientRegistrationMessage')}
+        </p>
 
         {error && (
           <div className="rounded-md bg-red-50 p-4">
@@ -91,20 +119,20 @@ export default function PatientRegistration() {
             <div className="flex">
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-green-800">
-                  Merci ! Un lien de confirmation vous a été envoyé à votre adresse e-mail.
+                  {t('auth.registrationSuccess')}
                 </h3>
                 <p className="text-sm text-green-700 mt-1">
-                  Redirection vers la page d'activation...
+                  {t('auth.confirmationEmailSent')}
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="rounded-md shadow-sm space-y-4">
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom complet
+                  {t('auth.fullName')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -112,21 +140,25 @@ export default function PatientRegistration() {
                   </div>
                   <input
                     id="fullName"
-                    name="fullName"
                     type="text"
                     autoComplete="name"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Votre nom complet"
-                    value={formData.fullName}
-                    onChange={handleChange}
+                    className={`appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border ${
+                      errors.fullName ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                    placeholder={t('auth.fullName')}
+                    {...register('fullName', {
+                      required: t('auth.fullNameRequired'),
+                    })}
                   />
                 </div>
+                {errors.fullName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
+                )}
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse e-mail
+                  {t('auth.email')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -134,21 +166,29 @@ export default function PatientRegistration() {
                   </div>
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="exemple@email.com"
-                    value={formData.email}
-                    onChange={handleChange}
+                    className={`appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border ${
+                      errors.email ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                    placeholder="example@email.com"
+                    {...register('email', {
+                      required: t('auth.emailRequired'),
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: t('auth.invalidEmail'),
+                      },
+                    })}
                   />
                 </div>
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -156,21 +196,29 @@ export default function PatientRegistration() {
                   </div>
                   <input
                     id="password"
-                    name="password"
                     type="password"
                     autoComplete="new-password"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border ${
+                      errors.password ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                     placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
+                    {...register('password', {
+                      required: t('auth.passwordRequired'),
+                      minLength: {
+                        value: 8,
+                        message: t('auth.passwordTooShort'),
+                      },
+                    })}
                   />
                 </div>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                )}
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirmer le mot de passe
+                  {t('auth.confirmPassword')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -178,25 +226,32 @@ export default function PatientRegistration() {
                   </div>
                   <input
                     id="confirmPassword"
-                    name="confirmPassword"
                     type="password"
                     autoComplete="new-password"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border ${
+                      errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                     placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
+                    {...register('confirmPassword', {
+                      required: t('auth.confirmPasswordRequired'),
+                      validate: value =>
+                        value === password || t('auth.passwordsDoNotMatch'),
+                    })}
                   />
                 </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                )}
               </div>
             </div>
 
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
-                Créer mon compte
+                {isLoading ? t('auth.registering') : t('auth.register')}
               </button>
             </div>
           </form>

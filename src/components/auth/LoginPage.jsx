@@ -3,13 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Envelope, Lock } from 'phosphor-react';
-import { signIn } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    id: null,
+    email: null,
+    role: null,
+    avatar: null
+  });
 
   const {
     register,
@@ -22,15 +28,42 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const { error: signInError } = await signIn(data.email, data.password);
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
       
       if (signInError) {
         setError(t('auth.loginError'));
         return;
       }
 
-      // Redirect to dashboard on success
-      navigate('/tableau-de-bord');
+      // Get user info from infoUtilisateur table
+      const { data: userData, error: userError } = await supabase
+        .from('infoUtilisateur')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError) {
+        setError(t('auth.loginError'));
+        return;
+      }
+
+      // Update state with user info
+      setUserInfo({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role,
+        avatar: userData.avatar
+      });
+
+      // Redirect based on role
+      if (userData.role === 'doctor') {
+        navigate('/tableau-de-bord');
+      } else {
+        navigate('/agenda');
+      }
     } catch (err) {
       setError(t('auth.loginError'));
     } finally {
@@ -110,6 +143,10 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   {...register('password', {
                     required: t('auth.passwordRequired'),
+                    minLength: {
+                      value: 8,
+                      message: t('auth.passwordTooShort'),
+                    },
                   })}
                 />
               </div>

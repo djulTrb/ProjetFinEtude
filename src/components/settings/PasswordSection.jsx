@@ -10,6 +10,7 @@ export default function PasswordSection() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState("");
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -21,6 +22,14 @@ export default function PasswordSection() {
 
   const handlePasswordUpdate = (e) => {
     e.preventDefault();
+    if (passwordData.newPassword.length < 8) {
+      setError(t('validation.passwordLength'));
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError(t('validation.passwordMismatch'));
+      return;
+    }
     // Here you would typically dispatch an action to update the password
     setPasswordData({
       currentPassword: "",

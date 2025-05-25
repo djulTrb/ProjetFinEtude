@@ -1,44 +1,111 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
 import { Envelope, Lock, User } from 'phosphor-react';
-import { TbStethoscope } from "react-icons/tb";
+import { supabase } from '../../lib/supabase';
+import { useDispatch } from 'react-redux';
+import { updateUser, updateProfile } from '../../store/slices/userSlice';
 import LanguageSwitch from './LanguageSwitch';
 
 export default function Inscription() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [showLogin, setShowLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const dispatch = useDispatch();
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    setError('');
     
-    if (!formData.email || !formData.password) {
-      setError(t('auth.requiredFields'));
-      return;
+    try {
+      console.log('Attempting login...');
+      // Sign in with Supabase Auth
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        setError(signInError.message || t('auth.loginError'));
+        return;
+      }
+
+      if (!authData?.user?.id) {
+        console.error('No user data returned from sign in');
+        setError(t('auth.loginError'));
+        return;
+      }
+
+      console.log('Fetching user data...');
+      // Get user data from infoUtilisateur table
+      const { data: userData, error: userError } = await supabase
+        .from('infoUtilisateur')
+        .select('*')
+        .eq('idUser', authData.user.id)
+        .single();
+
+      if (userError) {
+        console.error('User data fetch error:', userError);
+        setError(userError.message || t('auth.loginError'));
+        return;
+      }
+
+      if (!userData) {
+        console.error('No user data found');
+        setError(t('auth.loginError'));
+        return;
+      }
+
+      // Update Redux store with user info
+      dispatch(updateUser({ role: userData.role }));
+      dispatch(updateProfile({
+        name: userData.full_name,
+        email: userData.email,
+        avatar: userData.avatar
+      }));
+
+      // Set authentication in localStorage
+      localStorage.setItem('isAuthenticated', 'true');
+
+      // Log the state after update
+      console.log('Redux state after update:', {
+        role: userData.role,
+        name: userData.full_name,
+        email: userData.email,
+        avatar: userData.avatar
+      });
+
+      // Add a small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Redirect based on role
+      console.log('Navigating based on role:', userData.role);
+      if (userData.role === 'doctor') {
+        navigate('/tableau-de-bord', { replace: true });
+      } else {
+        navigate('/agenda', { replace: true });
+      }
+
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || t('auth.loginError'));
+    } finally {
+      setIsLoading(false);
     }
-    
-    // In a real app, this would send data to a backend
-    // For now, we'll just simulate a successful login
-    localStorage.setItem('isAuthenticated', 'true');
-    navigate('/tableau-de-bord');
   };
 
-  const handleUserTypeSelection = (type) => {
-    navigate(`/inscription/${type}`);
+  const handleShowRegister = (e) => {
+    e.preventDefault();
+    navigate('/inscription/patient');
   };
 
   return (
@@ -46,12 +113,12 @@ export default function Inscription() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8">
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-extrabold text-gray-900">
-            {showLogin ? t('auth.login') : t('auth.register')}
+            {t('auth.login')}
           </h2>
           <LanguageSwitch />
         </div>
         <p className="text-center text-sm text-gray-600">
-          {showLogin ? t('auth.loginMessage') : t('auth.roleSelectionMessage')}
+          {t('auth.loginMessage')}
         </p>
 
         {error && (
@@ -64,104 +131,83 @@ export default function Inscription() {
           </div>
         )}
 
-        {showLogin ? (
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-            <div className="rounded-md shadow-sm space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('auth.email')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Envelope className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="exemple@email.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+          <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                {t('auth.email')}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Envelope className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  id="email"
+                  type="email"
+                  {...register('email', { 
+                    required: t('auth.emailRequired'),
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: t('auth.invalidEmail')
+                    }
+                  })}
+                  className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="exemple@email.com"
+                />
               </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('auth.password')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                {t('auth.login')}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowLogin(false)}
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
-              >
-                {t('auth.register')}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="mt-8 space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              <button
-                onClick={() => handleUserTypeSelection('patient')}
-                className="group relative flex items-center justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                <User className="h-5 w-5 mr-2" />
-                {t('auth.registerAsPatient')}
-              </button>
-
-              <button
-                onClick={() => handleUserTypeSelection('medecin')}
-                className="group relative flex items-center justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                <TbStethoscope className="h-5 w-5 mr-2" />
-                {t('auth.registerAsDoctor')}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowLogin(true)}
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
-              >
-                {t('auth.login')}
-              </button>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                {t('auth.password')}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  {...register('password', { 
+                    required: t('auth.passwordRequired'),
+                    minLength: {
+                      value: 6,
+                      message: t('auth.passwordMinLength')
+                    }
+                  })}
+                  className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
           </div>
-        )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? t('auth.loggingIn') : t('auth.login')}
+            </button>
+          </div>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleShowRegister}
+              className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
+            >
+              {t('auth.register')}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -12,8 +12,8 @@ export default {
     phoneFormat: "Le numéro de téléphone doit contenir 10 chiffres",
     maxLength: "Maximum {{length}} caractères autorisés",
     email: "Veuillez entrer une adresse email valide",
-    password: "Le mot de passe doit contenir au moins 8 caractères",
-    confirmPassword: "Les mots de passe ne correspondent pas"
+    passwordLength: "Le mot de passe doit contenir au moins 8 caractères",
+    passwordMismatch: "Les mots de passe ne correspondent pas"
   },
   nav: {
     home: "Accueil",

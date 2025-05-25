@@ -206,7 +206,7 @@ export default function PatientRegistration() {
                       required: t('auth.passwordRequired'),
                       minLength: {
                         value: 8,
-                        message: t('auth.passwordTooShort'),
+                        message: t('validation.passwordLength'),
                       },
                     })}
                   />
@@ -234,8 +234,7 @@ export default function PatientRegistration() {
                     placeholder="••••••••"
                     {...register('confirmPassword', {
                       required: t('auth.confirmPasswordRequired'),
-                      validate: value =>
-                        value === password || t('auth.passwordsDoNotMatch'),
+                      validate: value => value === password || t('validation.passwordMismatch')
                     })}
                   />
                 </div>

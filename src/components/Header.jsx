@@ -8,6 +8,7 @@ export default function Header({ onShowNotifications }) {
   const user = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const isSidebarOpen = useSelector((state) => state.sidebar.isOpen);
+  const isDoctor = user.role.toLowerCase() === 'doctor';
 
   const toggleSidebar = () => {
     dispatch(setSidebarOpen(!isSidebarOpen));
@@ -38,20 +39,28 @@ export default function Header({ onShowNotifications }) {
                 <User weight="duotone" className="text-white text-xl" />
               )}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-800">{t('common.greeting')}, {user.name}</p>
-              <p className="text-sm text-gray-600">{t(`roles.${user.role.toLowerCase()}`)}</p>
+            <div className="text-right">
+              {isDoctor ? (
+                <p className="text-sm font-medium text-gray-800">Médecin</p>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-gray-800">{t('common.greeting')}, {user.name}</p>
+                  <p className="text-xs text-gray-600">{t(`roles.${user.role.toLowerCase()}`)}</p>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Notification bell - always visible */}
-          <button
-            onClick={onShowNotifications}
-            className="p-2 hover:bg-gray-100/60 rounded-full relative"
-          >
-            <Bell weight="duotone" className="text-[#2c5282] text-xl" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-[#dc3545] rounded-full"></span>
-          </button>
+          {/* Notification bell - only visible for patients */}
+          {!isDoctor && (
+            <button
+              onClick={onShowNotifications}
+              className="p-2 hover:bg-gray-100/60 rounded-full relative"
+            >
+              <Bell weight="bold" className="text-gray-600 text-xl" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+          )}
         </div>
       </div>
     </header>

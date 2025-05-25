@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       // Redirect based on role
       if (userData.role === 'doctor') {
-        navigate('/tableau-de-bord');
+        navigate('/');
       } else {
         navigate('/agenda');
       }
@@ -145,7 +145,7 @@ export default function LoginPage() {
                     required: t('auth.passwordRequired'),
                     minLength: {
                       value: 8,
-                      message: t('auth.passwordTooShort'),
+                      message: t('validation.passwordLength'),
                     },
                   })}
                 />

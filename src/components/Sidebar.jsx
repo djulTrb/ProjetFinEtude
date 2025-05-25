@@ -43,27 +43,21 @@ export default function Sidebar() {
 
   const navItems = [
     { 
-      path: "/", 
+      path: "/tableau-de-bord", 
       icon: House, 
       label: t('tableauDeBord.dashboard'),
       roles: ['doctor']
     },
     { 
-      path: "/annonces", 
-      icon: Megaphone, 
-      label: t('nav.announcements'),
-      roles: ['doctor', 'patient']
-    },
-    { 
-      path: "/messagerie", 
-      icon: ChatCircle, 
-      label: t('nav.messages'),
-      roles: ['doctor', 'patient']
-    },
-    { 
       path: "/agenda", 
       icon: Calendar, 
       label: t('nav.calendar'),
+      roles: ['doctor', 'patient']
+    },
+    { 
+      path: "/annonces", 
+      icon: Megaphone, 
+      label: t('nav.announcements'),
       roles: ['doctor', 'patient']
     },
     { 

@@ -28,6 +28,30 @@ export default function LoginPage() {
     setError('');
     
     try {
+      // Check if credentials match doctor credentials
+      const isDoctor = 
+        data.email === import.meta.env.VITE_DOCTOR_EMAIL && 
+        data.password === import.meta.env.VITE_DOCTOR_PASSWORD;
+
+      if (isDoctor) {
+        // Set doctor info directly
+        setUserInfo({
+          id: 'doctor',
+          email: data.email,
+          role: 'doctor',
+          avatar: null
+        });
+
+        // Store authentication state
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', 'doctor');
+        
+        // Redirect to dashboard
+        navigate('/tableau-de-bord');
+        return;
+      }
+
+      // Regular user login
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -58,9 +82,13 @@ export default function LoginPage() {
         avatar: userData.avatar
       });
 
+      // Store authentication state
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userRole', userData.role);
+
       // Redirect based on role
       if (userData.role === 'doctor') {
-        navigate('/');
+        navigate('/tableau-de-bord');
       } else {
         navigate('/agenda');
       }

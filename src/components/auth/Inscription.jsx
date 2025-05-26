@@ -166,7 +166,7 @@ export default function Inscription() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-gray-800" />
                 </div>
                 <input
                   id="password"
@@ -175,7 +175,7 @@ export default function Inscription() {
                     required: t('auth.passwordRequired'),
                     minLength: {
                       value: 6,
-                      message: t('auth.passwordMinLength')
+                      message: t('auth.passwordTooShort')
                     }
                   })}
                   className="appearance-none rounded-lg relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"

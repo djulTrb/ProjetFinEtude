@@ -13,7 +13,8 @@ export default {
     maxLength: "الحد الأقصى {{length}} حرف",
     email: "يرجى إدخال عنوان بريد إلكتروني صالح",
     passwordLength: "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل",
-    passwordMismatch: "كلمات المرور غير متطابقة"
+    passwordMismatch: "كلمات المرور غير متطابقة",
+    invalidEmail: "بريد إلكتروني غير صالح",
   },
   nav: {
     home: "الرئيسية",

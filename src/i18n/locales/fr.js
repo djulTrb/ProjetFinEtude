@@ -13,7 +13,8 @@ export default {
     maxLength: "Maximum {{length}} caractères autorisés",
     email: "Veuillez entrer une adresse email valide",
     passwordLength: "Le mot de passe doit contenir au moins 8 caractères",
-    passwordMismatch: "Les mots de passe ne correspondent pas"
+    passwordMismatch: "Les mots de passe ne correspondent pas",
+    invalidEmail: "Email invalide",
   },
   nav: {
     home: "Accueil",

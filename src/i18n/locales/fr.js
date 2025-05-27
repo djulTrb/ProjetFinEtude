@@ -115,6 +115,11 @@ export default {
     editAppointment: "Modifier le rendez-vous",
     monthView: "Vue mensuelle",
     dayView: "Vue journalière",
+    appointmentAccepted: "Rendez-vous accepté",
+    appointmentAcceptedMessage: "Votre rendez-vous a été confirmé. Nous vous attendons à la date et l'heure indiquées.",
+    appointmentDeclined: "Rendez-vous refusé",
+    appointmentDeclinedMessage: "Votre demande de rendez-vous n'a pas pu être acceptée. Vous pouvez demander un nouveau rendez-vous.",
+    requestNewAppointment: "Demander un nouveau rendez-vous",
     appointmentTypes: {
       consultation: "Consultation",
       "follow-up": "Suivi",

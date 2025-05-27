@@ -250,9 +250,9 @@ export default function Agenda() {
 
       // Fetch user profile
       const { data: userProfile, error: userProfileError } = await supabase
-        .from('infoUtilisateur')
+        .from('profiles')
         .select('*')
-        .eq('idUser', authUser.id)
+        .eq('id', authUser.id)
         .single();
 
       if (userProfileError) throw userProfileError;
@@ -262,9 +262,9 @@ export default function Agenda() {
         .from('rendez_vous')
         .select(`
           *,
-          patient:infoUtilisateur!rendez_vous_patient_id_fkey(
+          patient:profiles!rendez_vous_patient_id_fkey(
             full_name,
-            avatar
+            avatar_url
           )
         `);
 
@@ -280,7 +280,7 @@ export default function Agenda() {
         id: appointment.id,
         patientId: appointment.patient_id,
         patientName: appointment.patient?.full_name || 'Unknown',
-        profilePicture: appointment.patient?.avatar,
+        profilePicture: appointment.patient?.avatar_url,
         date: appointment.date_heure,
         type: appointment.type_rendez_vous,
         status: appointment.statut,
@@ -290,15 +290,20 @@ export default function Agenda() {
 
       setAppointments(transformedAppointments);
 
-      // Check for active appointment
+      // Check for active appointment - prioritize accepted appointments
       const activeAppointment = transformedAppointments.find(
-        app => app.status === 'en_attente' || app.status === 'accepte'
+        app => app.status === 'accepte' || app.status === 'en_attente'
       );
 
       if (activeAppointment) {
         setActiveAppointment(activeAppointment);
         setHasActiveAppointment(true);
         localStorage.setItem('activeAppointment', JSON.stringify(activeAppointment));
+      } else {
+        // If no active appointment found, clear the state
+        setActiveAppointment(null);
+        setHasActiveAppointment(false);
+        localStorage.removeItem('activeAppointment');
       }
 
     } catch (error) {
@@ -308,6 +313,14 @@ export default function Agenda() {
       setLoading(false);
     }
   };
+
+  // Add useEffect to fetch data periodically
+  useEffect(() => {
+    fetchData();
+    // Set up polling every 30 seconds to check for status updates
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Handle form submission
   const onSubmit = async (data) => {
@@ -622,26 +635,6 @@ export default function Agenda() {
       </div>
     );
   };
-
-  // Add useEffect to persist appointment management view
-  useEffect(() => {
-    // Check if there's an active appointment in localStorage
-    const savedAppointment = localStorage.getItem('activeAppointment');
-    if (savedAppointment) {
-      const parsedAppointment = JSON.parse(savedAppointment);
-      setActiveAppointment(parsedAppointment);
-      setHasActiveAppointment(true);
-    }
-  }, []);
-
-  // Update localStorage when activeAppointment changes
-  useEffect(() => {
-    if (activeAppointment) {
-      localStorage.setItem('activeAppointment', JSON.stringify(activeAppointment));
-    } else {
-      localStorage.removeItem('activeAppointment');
-    }
-  }, [activeAppointment]);
 
   // Block Modal for doctors
   const renderBlockModal = () => {
@@ -961,13 +954,29 @@ export default function Agenda() {
               </button>
             )}
             {activeAppointment.status === 'accepte' && (
-              <div className="text-center text-green-600 font-medium">
-                {t('agenda.appointmentAccepted')}
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-green-700 font-medium">
+                  {t('agenda.appointmentAccepted')}
+                </p>
+                <p className="text-sm text-green-600 mt-2">
+                  {t('agenda.appointmentAcceptedMessage')}
+                </p>
               </div>
             )}
             {activeAppointment.status === 'refuse' && (
-              <div className="text-center text-red-600 font-medium">
-                {t('agenda.appointmentDeclined')}
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <p className="text-red-700 font-medium">
+                  {t('agenda.appointmentDeclined')}
+                </p>
+                <p className="text-sm text-red-600 mt-2">
+                  {t('agenda.appointmentDeclinedMessage')}
+                </p>
+                <button
+                  onClick={handleChangeAppointment}
+                  className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {t('agenda.requestNewAppointment')}
+                </button>
               </div>
             )}
           </div>

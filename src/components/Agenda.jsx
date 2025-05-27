@@ -107,7 +107,7 @@ export default function Agenda() {
       return isSameDay(appointmentDate, date) && 
              getHours(appointmentDate) === timeSlot.hour &&
              getMinutes(appointmentDate) === timeSlot.minutes &&
-             appointment.status !== 'declined';
+             (appointment.status === 'accepte' || appointment.status === 'en_attente');
     });
   };
 
@@ -290,9 +290,9 @@ export default function Agenda() {
 
       setAppointments(transformedAppointments);
 
-      // Check for active appointment - prioritize accepted appointments
+      // Check for active appointment - show all appointments including rejected ones
       const activeAppointment = transformedAppointments.find(
-        app => app.status === 'accepte' || app.status === 'en_attente'
+        app => app.status === 'accepte' || app.status === 'en_attente' || app.status === 'refuse'
       );
 
       if (activeAppointment) {
@@ -636,6 +636,85 @@ export default function Agenda() {
     );
   };
 
+  // Time slots view for patients
+  const renderTimeSlotsView = () => {
+    if (!selectedDate) return null;
+
+    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
+    const timeSlots = generateTimeSlots();
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="bg-white rounded-lg shadow-xl w-[95vw] h-[90vh] max-w-6xl flex flex-col">
+          <div className="p-4 sm:p-6 border-b">
+            <h3 className="text-lg sm:text-xl font-bold">
+              {t('agenda.timeSlots.title')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)}
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {timeSlots.map((timeSlot, index) => {
+                const isBlocked = isDayBlocked || isTimeSlotBlocked(selectedDate, timeSlot);
+                const hasActiveAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
+                const isAvailable = !isBlocked && !hasActiveAppointment;
+                
+                return (
+                  <div 
+                    key={index}
+                    onClick={() => handleTimeSlotClick(timeSlot)}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      isAvailable ? 'bg-green-50 cursor-pointer hover:bg-green-100' : 'bg-red-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {formatTimeSlot(timeSlot)}
+                      </span>
+                      {isAvailable ? (
+                        <span className="text-xs text-green-600">
+                          {t('agenda.available')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-600">
+                          {t('agenda.blocked')}
+                        </span>
+                      )}
+                    </div>
+                    {user.role.toLowerCase() === 'doctor' && !hasActiveAppointment && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTimeSlotBlock(selectedDate, timeSlot);
+                        }}
+                        className={`p-2 rounded-full ${
+                          isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'
+                        }`}
+                      >
+                        {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="p-4 sm:p-6 border-t flex justify-end">
+            <button 
+              onClick={() => {
+                setSelectedDate(null);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Block Modal for doctors
   const renderBlockModal = () => {
     if (!selectedDate) return null;
@@ -654,17 +733,23 @@ export default function Agenda() {
               {timeSlots.map((timeSlot, index) => {
                 const isBlocked = isTimeSlotBlocked(selectedDate, timeSlot);
                 const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
+                const isAvailable = !isBlocked && !hasAppointment;
+                
                 return (
                   <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                    hasAppointment ? 'bg-blue-50' : isBlocked ? 'bg-red-50' : 'bg-green-50'
+                    isAvailable ? 'bg-green-50' : 'bg-red-50'
                   }`}>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
                         {formatTimeSlot(timeSlot)}
                       </span>
-                      {hasAppointment && (
-                        <span className="text-xs text-blue-600">
-                          {t('agenda.hasAppointment')}
+                      {isAvailable ? (
+                        <span className="text-xs text-green-600">
+                          {t('agenda.available')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-600">
+                          {t('agenda.blocked')}
                         </span>
                       )}
                     </div>
@@ -817,93 +902,6 @@ export default function Agenda() {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    );
-  };
-
-  // Time slots view for patients
-  const renderTimeSlotsView = () => {
-    if (!selectedDate) return null;
-
-    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
-    const timeSlots = generateTimeSlots();
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-        <div className="bg-white rounded-lg shadow-xl w-[95vw] h-[90vh] max-w-6xl flex flex-col">
-          <div className="p-4 sm:p-6 border-b">
-            <h3 className="text-lg sm:text-xl font-bold">
-              {t('agenda.timeSlots.title')} - {format(selectedDate, 'd')} {getMonthName(selectedDate)}
-            </h3>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {timeSlots.map((timeSlot, index) => {
-                const isBlocked = isDayBlocked || isTimeSlotBlocked(selectedDate, timeSlot);
-                const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
-                const isAvailable = !isBlocked && !hasAppointment;
-                
-                return (
-                  <div 
-                    key={index}
-                    onClick={() => handleTimeSlotClick(timeSlot)}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      hasAppointment ? 'bg-blue-50 cursor-not-allowed' : 
-                      isBlocked ? 'bg-red-50 cursor-not-allowed' : 
-                      'bg-green-50 cursor-pointer hover:bg-green-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {formatTimeSlot(timeSlot)}
-                      </span>
-                      {hasAppointment && (
-                        <span className="text-xs text-blue-600">
-                          {t('agenda.hasAppointment')}
-                        </span>
-                      )}
-                      {isBlocked && (
-                        <span className="text-xs text-red-600">
-                          {t('agenda.blocked')}
-                        </span>
-                      )}
-                      {isAvailable && (
-                        <span className="text-xs text-green-600">
-                          {t('agenda.available')}
-                        </span>
-                      )}
-                    </div>
-                    {user.role.toLowerCase() === 'doctor' && !hasAppointment && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTimeSlotBlock(selectedDate, timeSlot);
-                        }}
-                        className={`p-2 rounded-full ${
-                          isBlocked ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'
-                        }`}
-                      >
-                        {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="p-4 sm:p-6 border-t flex justify-end">
-            <button 
-              onClick={() => {
-                setSelectedDate(null);
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-            >
-              {t('common.close')}
-            </button>
-          </div>
         </div>
       </div>
     );

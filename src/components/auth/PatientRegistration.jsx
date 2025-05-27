@@ -28,6 +28,19 @@ export default function PatientRegistration() {
 
   const password = watch('password');
 
+  const validatePassword = (password) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= 8;
+
+    if (!isLongEnough || !hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+      return t('validation.passwordComplexity');
+    }
+    return true;
+  };
+
   const onSubmit = async (data) => {
     setIsLoading(true);
     setError('');
@@ -65,7 +78,6 @@ export default function PatientRegistration() {
       }
 
       setSuccess(true);
-      
       
       setUserInfo({
         id: userData.id,
@@ -204,16 +216,14 @@ export default function PatientRegistration() {
                     placeholder="••••••••"
                     {...register('password', {
                       required: t('auth.passwordRequired'),
-                      minLength: {
-                        value: 8,
-                        message: t('validation.passwordLength'),
-                      },
+                      validate: validatePassword
                     })}
                   />
                 </div>
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
                 )}
+               
               </div>
 
               <div>
@@ -248,7 +258,7 @@ export default function PatientRegistration() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? t('auth.registering') : t('auth.register')}
               </button>

@@ -6,6 +6,7 @@ export default {
     noAppointments: "vous n'avez aucun rendez-vous prévu",
     close: "Fermer",
     cancel: "Annuler",
+    saving: "Enregistrement...",
   },
   validation: {
     required: "Ce champ est requis",
@@ -15,6 +16,7 @@ export default {
     passwordLength: "Le mot de passe doit contenir au moins 8 caractères",
     passwordMismatch: "Les mots de passe ne correspondent pas",
     invalidEmail: "Email invalide",
+    passwordComplexity: "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial",
   },
   nav: {
     home: "Accueil",
@@ -53,6 +55,15 @@ export default {
       confirm: "Confirmer le nouveau mot de passe",
       change: "Changer le mot de passe",
       cancel: "Annuler",
+      requirements: "Le mot de passe doit respecter les critères suivants :",
+      length: "Au moins 8 caractères",
+      uppercase: "Au moins une lettre majuscule",
+      lowercase: "Au moins une lettre minuscule",
+      number: "Au moins un chiffre",
+      special: "Au moins un caractère spécial",
+      incorrectCurrent: "Le mot de passe actuel est incorrect",
+      success: "Le mot de passe a été modifié avec succès",
+      updateError: "Une erreur est survenue lors de la modification du mot de passe",
     },
     disconnect: {
       title: "Déconnexion",

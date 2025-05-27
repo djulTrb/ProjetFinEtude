@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lock, Eye, EyeSlash } from 'phosphor-react';
+import { supabase } from '../../lib/supabase';
 
 export default function PasswordSection() {
   const { t } = useTranslation();
@@ -91,15 +92,40 @@ export default function PasswordSection() {
 
     setIsSubmitting(true);
     try {
-      // Here you would typically dispatch an action to update the password
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
+      // First, verify the current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: supabase.auth.getUser().then(({ data }) => data.user.email),
+        password: passwordData.currentPassword,
+      });
+
+      if (signInError) {
+        setErrors({
+          currentPassword: t('settings.password.incorrectCurrent'),
+        });
+        return;
+      }
+
+      // If current password is correct, update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Clear form and show success message
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
       setIsChangingPassword(false);
+      
+      // Show success message (you might want to add a toast notification here)
+      alert(t('settings.password.success'));
     } catch (error) {
+      console.error('Password update error:', error);
       setErrors({
         submit: t('settings.password.updateError'),
       });
@@ -165,7 +191,7 @@ export default function PasswordSection() {
             {errors.newPassword && (
               <p className="mt-1 text-xs text-red-500">{errors.newPassword}</p>
             )}
-           
+            
           </div>
           
           <div className="mb-4">

@@ -150,10 +150,10 @@ export default {
       title: "Créneaux horaires"
     },
     status: {
-      pending: "En attente",
-      accepted: "Accepté",
-      declined: "Refusé",
-      cancelled: "Annulé"
+      en_attente: 'En attente',
+      accepte: 'Accepté',
+      refuse: 'Refusé',
+      annule: 'Annulé'
     },
     hasAppointment: "Rendez-vous",
     blocked: "Bloqué",

@@ -1,55 +1,109 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Check, User, Note } from 'phosphor-react';
 import { format, parseISO } from 'date-fns';
-
-// Mock data for appointment requests - in a real app, this would come from an API
-const mockAppointmentRequests = [
-  {
-    id: 1,
-    patientId: 101,
-    patientName: 'Jean Dupont',
-    profilePicture: null, // URL to profile picture if available
-    date: '2023-06-15T10:00:00',
-    type: 'consultation',
-    status: 'pending',
-    note: 'Première consultation pour douleurs chroniques'
-  },
-  {
-    id: 2,
-    patientId: 102,
-    patientName: 'Marie Martin',
-    profilePicture: null,
-    date: '2023-06-16T14:30:00',
-    type: 'follow-up',
-    status: 'pending',
-    note: null
-  },
-  {
-    id: 3,
-    patientId: 103,
-    patientName: 'Pierre Durand',
-    profilePicture: null,
-    date: '2023-06-17T09:15:00',
-    type: 'emergency',
-    status: 'pending',
-    note: 'Urgence: douleur intense à la poitrine'
-  }
-];
+import { supabase } from '../lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function AppointmentRequests() {
   const { t } = useTranslation();
-  const [requests, setRequests] = useState(mockAppointmentRequests);
+  const [requests, setRequests] = useState([]);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch appointment requests
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('rendez_vous')
+          .select(`
+            *,
+            patient:patient_id (
+              id,
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('statut', 'en_attente')
+          .order('date_heure', { ascending: true });
+
+        if (error) throw error;
+
+        const transformedRequests = data.map(request => ({
+          id: request.id,
+          patientId: request.patient_id,
+          patientName: request.patient?.full_name || 'Unknown',
+          profilePicture: request.patient?.avatar_url,
+          date: request.date_heure,
+          type: request.type_rendez_vous,
+          status: request.statut,
+          note: request.note,
+          telephone: request.telephone
+        }));
+
+        setRequests(transformedRequests);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, []);
 
   // Handle appointment action (accept or decline)
-  const handleAppointmentAction = (requestId, action) => {
-    setRequests(prevRequests => 
-      prevRequests.filter(request => request.id !== requestId)
-    );
-    
-    // In a real app, this would dispatch an action to update the appointment status
-    console.log(`Appointment ${requestId} ${action === 'accept' ? 'accepted' : 'declined'}`);
+  const handleAppointmentAction = async (requestId, action) => {
+    try {
+      // Update appointment status
+      const { error: updateError } = await supabase
+        .from('rendez_vous')
+        .update({ statut: action === 'accept' ? 'accepte' : 'refuse' })
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Create response record
+      const { error: responseError } = await supabase
+        .from('reponses_rendez_vous')
+        .insert([{
+          id: uuidv4(),
+          rendez_vous_id: requestId,
+          reponse: action === 'accept' ? 'accepte' : 'refuse',
+          message: action === 'accept' ? 'Rendez-vous accepté' : 'Rendez-vous refusé'
+        }]);
+
+      if (responseError) throw responseError;
+
+      // Create notification for patient
+      const request = requests.find(r => r.id === requestId);
+      if (request) {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert([{
+            id: uuidv4(),
+            user_id: request.patientId,
+            type: action === 'accept' ? 'rendez_vous_accepte' : 'rendez_vous_refuse',
+            message: action === 'accept' 
+              ? 'Votre demande de rendez-vous a été acceptée'
+              : 'Votre demande de rendez-vous a été refusée',
+            lu: false
+          }]);
+
+        if (notificationError) throw notificationError;
+      }
+
+      // Update local state
+      setRequests(prevRequests => 
+        prevRequests.filter(request => request.id !== requestId)
+      );
+    } catch (err) {
+      console.error('Error handling appointment action:', err);
+      setError(err.message);
+    }
   };
 
   // Get appointment type color
@@ -73,31 +127,21 @@ export default function AppointmentRequests() {
     return `${t(`agenda.days.${days[dayIndex]}`)} ${format(date, 'd')} ${t(`agenda.months.${months[monthIndex]}`)} ${format(date, 'yyyy')} ${format(date, 'HH:mm')}`;
   };
 
-  // Note modal
-  const renderNoteModal = () => {
-    if (!selectedNote) return null;
-
+  if (loading) {
     return (
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={() => setSelectedNote(null)}
-      >
-        <div 
-          className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6"
-          onClick={e => e.stopPropagation()}
-        >
-          <h3 className="text-lg font-semibold mb-2">{t('appointmentRequests.note')}</h3>
-          <p className="text-gray-600">{selectedNote}</p>
-          <button 
-            onClick={() => setSelectedNote(null)}
-            className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-          >
-            {t('common.close')}
-          </button>
-        </div>
+      <div className="h-full flex items-center justify-center">
+        <p className="text-gray-500">{t('common.loading')}</p>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -137,45 +181,35 @@ export default function AppointmentRequests() {
                   </div>
                 </div>
 
-                {/* Appointment type flag, note icon, and action buttons in a row */}
-                <div className="w-full sm:w-2/4 flex flex-row justify-self-end items-center">
-                  <div className="flex items-center flex-1 sm:-translate-x-8">
-                    {/* Appointment type flag */}
-                    <div className="flex-shrink-0 ">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getAppointmentTypeColor(request.type)}`}>
-                        {t(`agenda.appointmentTypes.${request.type}`)}
-                      </span>
-                    </div>
-
-                    {/* Note icon - only show if there's a note */}
-                    {request.note && (
-                      <button
-                        onClick={() => setSelectedNote(request.note)}
-                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
-                        title={t('appointmentRequests.viewNote')}
-                      >
-                        <Note size={20} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex space-x-2 flex-shrink-0">
-                    <button 
-                      onClick={() => handleAppointmentAction(request.id, 'decline')}
-                      className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                      title={t('appointmentRequests.decline')}
+                {/* Appointment type and note */}
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${getAppointmentTypeColor(request.type)}`}>
+                    {t(`agenda.appointmentTypes.${request.type}`)}
+                  </span>
+                  {request.note && (
+                    <button
+                      onClick={() => setSelectedNote(request.note)}
+                      className="p-1 text-gray-500 hover:text-gray-700"
                     >
-                      <X size={20} />
+                      <Note size={20} />
                     </button>
-                    <button 
-                      onClick={() => handleAppointmentAction(request.id, 'accept')}
-                      className="p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
-                      title={t('appointmentRequests.accept')}
-                    >
-                      <Check size={20} />
-                    </button>
-                  </div>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleAppointmentAction(request.id, 'accept')}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-full"
+                  >
+                    <Check size={24} />
+                  </button>
+                  <button
+                    onClick={() => handleAppointmentAction(request.id, 'decline')}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -184,7 +218,22 @@ export default function AppointmentRequests() {
       </div>
 
       {/* Note Modal */}
-      {renderNoteModal()}
+      {selectedNote && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold">{t('appointmentRequests.note')}</h3>
+              <button
+                onClick={() => setSelectedNote(null)}
+                className="p-1 hover:bg-gray-100 rounded-full"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-700 whitespace-pre-wrap">{selectedNote}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

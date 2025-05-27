@@ -76,6 +76,8 @@ export default function Agenda() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isStacked, setIsStacked] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 800);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const timeSlots = generateTimeSlots();
   const minAppointmentDate = addDays(new Date(), 2); // Minimum date is 2 days from now
   
@@ -239,62 +241,112 @@ export default function Agenda() {
   // Handle form submission
   const onSubmit = async (data) => {
     try {
-      // Generate a unique ID for the appointment
-      const idRendezVous = uuidv4();
+      setLoading(true);
       
-      // Get the current date components
-      const currentDate = new Date();
-      const selectedDateObj = new Date(selectedDate);
+      // Get the current user from Supabase auth
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
-      // Create the appointment data object
-      const appointmentData = {
-        idRendezVous: idRendezVous,
-        idUser: user.id,
-        an: currentDate.getFullYear(),
-        mois: selectedDateObj.getMonth(),
-        jour: selectedDateObj.getDate(),
-        heure: selectedHour,
-        etDemi: selectedMinutes === 30,
-        remarque: data.note,
-        numTel: data.phone,
-        typeRDV: data.appointmentType,
-        statut: 'enAttente'
-      };
+      if (authError) throw authError;
+      if (!authUser) throw new Error('No authenticated user found');
 
-      // Insert the appointment into Supabase
-      const { error } = await supabase
-        .from('listeDemandesRendezVous')
-        .insert([appointmentData]);
+      // First, ensure the user has a profile
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
 
-        console.log(error)
-      if (error) throw error;
+      // If profile doesn't exist, create it
+      if (!existingProfile) {
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .upsert([{
+            id: authUser.id,
+            email: authUser.email,
+            full_name: authUser.user_metadata?.full_name || 'Unknown',
+            avatar_url: authUser.user_metadata?.avatar_url
+          }], {
+            onConflict: 'id'
+          });
 
-      // Create new appointment object for local state
+        if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
+          throw createProfileError;
+        }
+      }
+      
+      // Create appointment record
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('rendez_vous')
+        .insert([{
+          id: uuidv4(),
+          patient_id: authUser.id,
+          date_heure: `${format(selectedDate, 'yyyy-MM-dd')}T${String(selectedHour).padStart(2, '0')}:${String(selectedMinutes || 0).padStart(2, '0')}:00`,
+          type_rendez_vous: data.appointmentType,
+          statut: 'en_attente',
+          note: data.note,
+          telephone: data.phone
+        }])
+        .select(`
+          *,
+          patient:patient_id (
+            id,
+            email,
+            full_name,
+            avatar_url
+          )
+        `)
+        .single();
+
+      if (appointmentError) {
+        console.error('Error creating appointment:', appointmentError);
+        throw appointmentError;
+      }
+
+      // Create notification for doctor
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          id: uuidv4(),
+          user_id: authUser.id,
+          type: 'nouvelle_demande',
+          message: 'Nouvelle demande de rendez-vous',
+          lu: false
+        }]);
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        throw notificationError;
+      }
+
+      // Update local state
       const newAppointment = {
-        id: idRendezVous,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        time: `${selectedHour}:${selectedMinutes === 30 ? '30' : '00'}`,
-        phone: data.phone,
+        id: appointment.id,
+        patientId: authUser.id,
+        patientName: appointment.patient?.full_name || authUser.user_metadata?.full_name || 'Unknown',
+        profilePicture: appointment.patient?.avatar_url || authUser.user_metadata?.avatar_url,
+        date: appointment.date_heure,
         type: data.appointmentType,
+        status: 'en_attente',
         note: data.note,
-        status: 'pending'
+        telephone: data.phone
       };
-      
-      // Set active appointment
+
+      setAppointments(prev => [...prev, newAppointment]);
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
-      
-      // Reset form and close modal after 3 seconds
-      setTimeout(() => {
-        reset();
-        setShowAppointmentForm(false);
-        setShowConfirmation(false);
-        setSelectedHour(null);
-        setSelectedDate(null);
-      }, 3000);
 
+      // Close modal and reset form
+      setShowAppointmentForm(false);
+      setSelectedHour(null);
+      setSelectedMinutes(null);
+      setSelectedDate(null);
+      reset();
     } catch (error) {
       console.error('Error saving appointment:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -309,6 +361,7 @@ export default function Agenda() {
   const handleChangeAppointment = () => {
     setHasActiveAppointment(false);
     setActiveAppointment(null);
+    localStorage.removeItem('activeAppointment');
   };
 
   // Handle appointment deletion
@@ -435,7 +488,6 @@ export default function Agenda() {
         
         {/* Calendar days */}
         {calendarDays.map((day, index) => {
-          const dayAppointments = getAppointmentsForDate(day);
           const isToday = isSameDay(day, new Date());
           const isPast = day < minAppointmentDate;
           const isFuture = day > new Date(new Date().setMonth(new Date().getMonth() + 3));
@@ -459,9 +511,9 @@ export default function Agenda() {
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center">
-                <span className={`font-medium text-xs sm:text-sm ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                  {format(day, 'd')}
-                </span>
+                  <span className={`font-medium text-xs sm:text-sm ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                    {format(day, 'd')}
+                  </span>
                   {isStacked && (
                     <span className="ml-2 text-xs text-gray-500">
                       {getDayName(day, isMobile)}
@@ -480,28 +532,32 @@ export default function Agenda() {
                   </button>
                 )}
               </div>
-              
-              {/* Appointments for this day */}
-              <div className="mt-1 sm:mt-2 space-y-1">
-                {dayAppointments.map(appointment => (
-                  <div 
-                    key={appointment.id}
-                    className={`text-xs p-1 rounded ${getStatusColor(appointment.status)}`}
-                  >
-                    <div className="flex items-center">
-                      <Clock size={10} className="mr-1" />
-                      <span className="text-[10px] sm:text-xs">{formatAppointmentTime(appointment.date)}</span>
-                    </div>
-                    <div className="truncate text-[10px] sm:text-xs">{appointment.patientName}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           );
         })}
       </div>
     );
   };
+
+  // Add useEffect to persist appointment management view
+  useEffect(() => {
+    // Check if there's an active appointment in localStorage
+    const savedAppointment = localStorage.getItem('activeAppointment');
+    if (savedAppointment) {
+      const parsedAppointment = JSON.parse(savedAppointment);
+      setActiveAppointment(parsedAppointment);
+      setHasActiveAppointment(true);
+    }
+  }, []);
+
+  // Update localStorage when activeAppointment changes
+  useEffect(() => {
+    if (activeAppointment) {
+      localStorage.setItem('activeAppointment', JSON.stringify(activeAppointment));
+    } else {
+      localStorage.removeItem('activeAppointment');
+    }
+  }, [activeAppointment]);
 
   // Block Modal for doctors
   const renderBlockModal = () => {
@@ -772,10 +828,22 @@ export default function Agenda() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">{t('agenda.appointmentDetails')}</h3>
               <div className="space-y-2">
-                <p><span className="font-medium">{t('agenda.date')}:</span> {activeAppointment.date}</p>
-                <p><span className="font-medium">{t('agenda.time')}:</span> {activeAppointment.time}</p>
-                <p><span className="font-medium">{t('agenda.type')}:</span> {t(`agenda.appointmentTypes.${activeAppointment.type}`)}</p>
-                <p><span className="font-medium">{t('agenda.statusType')}:</span> {getStatusText(activeAppointment.status)}</p>
+                <p>
+                  <span className="font-medium">{t('agenda.date')}:</span>{' '}
+                  {format(parseISO(activeAppointment.date), 'EEEE d MMMM yyyy', { locale: fr })}
+                </p>
+                <p>
+                  <span className="font-medium">{t('agenda.time')}:</span>{' '}
+                  {format(parseISO(activeAppointment.date), 'HH:mm')}
+                </p>
+                <p>
+                  <span className="font-medium">{t('agenda.type')}:</span>{' '}
+                  {t(`agenda.appointmentTypes.${activeAppointment.type}`)}
+                </p>
+                <p>
+                  <span className="font-medium">{t('agenda.statusType')}:</span>{' '}
+                  {t(`agenda.status.${activeAppointment.status}`)}
+                </p>
               </div>
             </div>
           </div>

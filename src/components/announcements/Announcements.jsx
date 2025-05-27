@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { Megaphone, Plus, Trash, X, Image } from 'phosphor-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
 
 export default function Announcements() {
   const { t } = useTranslation();
@@ -15,10 +16,14 @@ export default function Announcements() {
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [newAnnouncement, setNewAnnouncement] = useState({
-    titre: '',
-    contenu: '',
-    photo: ''
+  const [imagePreview, setImagePreview] = useState(null);
+  
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      titre: '',
+      contenu: '',
+      photo: ''
+    }
   });
 
   useEffect(() => {
@@ -43,19 +48,26 @@ export default function Announcements() {
     }
   };
 
-  const handleCreateAnnouncement = async (e) => {
-    e.preventDefault();
+  const handleCreateAnnouncement = async (data) => {
     try {
-      const { data, error } = await supabase
+      const now = new Date();
+      const announcementData = {
+        ...data,
+        photo: imagePreview,
+        created_at: now.toISOString()
+      };
+
+      const { data: newData, error } = await supabase
         .from('annonces')
-        .insert([newAnnouncement])
+        .insert([announcementData])
         .select();
 
       if (error) throw error;
 
-      setAnnouncements([...data, ...announcements]);
+      setAnnouncements([...newData, ...announcements]);
       setIsCreating(false);
-      setNewAnnouncement({ titre: '', contenu: '', photo: '' });
+      reset();
+      setImagePreview(null);
     } catch (error) {
       console.error('Error creating announcement:', error);
       setError(error.message);
@@ -83,14 +95,9 @@ export default function Announcements() {
     if (!file) return;
 
     try {
-      // Convert the file to base64
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Update the announcement with the base64 image string
-        setNewAnnouncement(prev => ({
-          ...prev,
-          photo: reader.result
-        }));
+        setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -178,7 +185,7 @@ export default function Announcements() {
               {announcement.photo && (
                 <div className="p-4">
                   <div 
-                    className="w-48 h-32 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                    className="w-96 h-64 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => setSelectedImage(announcement.photo)}
                   >
                     <img
@@ -210,7 +217,15 @@ export default function Announcements() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{new Date(announcement.created_at).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(announcement.created_at).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -272,41 +287,56 @@ export default function Announcements() {
                   {t('announcements.addModal.title')}
                 </h2>
                 <button
-                  onClick={() => setIsCreating(false)}
+                  onClick={() => {
+                    setIsCreating(false);
+                    reset();
+                    setImagePreview(null);
+                  }}
                   className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   <X weight="bold" className="text-xl" />
                 </button>
               </div>
-              <form onSubmit={handleCreateAnnouncement} className="flex flex-col h-full">
+              <form onSubmit={handleSubmit(handleCreateAnnouncement)} className="flex flex-col h-full">
                 <div className="flex-1 p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t('announcements.addModal.titleLabel')}
                     </label>
                     <input
-                      type="text"
-                      value={newAnnouncement.titre}
-                      onChange={(e) => setNewAnnouncement({ ...newAnnouncement, titre: e.target.value })}
+                      {...register('titre', { 
+                        required: t('announcements.addModal.titleRequired'),
+                        maxLength: {
+                          value: 150,
+                          message: t('announcements.addModal.titleTooLong')
+                        }
+                      })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-sky-500 focus:border-sky-500 text-sm sm:text-base"
                       placeholder={t('announcements.addModal.titlePlaceholder')}
-                      required
-                      maxLength={150}
                     />
+                    {errors.titre && (
+                      <p className="mt-1 text-sm text-red-600">{errors.titre.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t('announcements.addModal.contentLabel')}
                     </label>
                     <textarea
-                      value={newAnnouncement.contenu}
-                      onChange={(e) => setNewAnnouncement({ ...newAnnouncement, contenu: e.target.value })}
+                      {...register('contenu', {
+                        required: t('announcements.addModal.contentRequired'),
+                        maxLength: {
+                          value: 3000,
+                          message: t('announcements.addModal.contentTooLong')
+                        }
+                      })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-sky-500 focus:border-sky-500 text-sm sm:text-base"
                       placeholder={t('announcements.addModal.contentPlaceholder')}
-                      required
                       rows={4}
-                      maxLength={3000}
                     />
+                    {errors.contenu && (
+                      <p className="mt-1 text-sm text-red-600">{errors.contenu.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -323,22 +353,22 @@ export default function Announcements() {
                           className="hidden"
                         />
                       </label>
-                      {newAnnouncement.photo && (
+                      {imagePreview && (
                         <button
                           type="button"
-                          onClick={() => setNewAnnouncement({ ...newAnnouncement, photo: '' })}
+                          onClick={() => setImagePreview(null)}
                           className="text-red-600 text-sm self-start sm:self-auto hover:text-red-700 transition-colors"
                         >
                           {t('announcements.addModal.removePhoto')}
                         </button>
                       )}
                     </div>
-                    {newAnnouncement.photo && (
+                    {imagePreview && (
                       <div className="mt-3">
                         <img
-                          src={newAnnouncement.photo}
+                          src={imagePreview}
                           alt="Preview"
-                          className="max-h-36 sm:max-h-48 rounded-lg object-cover"
+                          className="w-96 h-64 rounded-lg object-cover"
                         />
                       </div>
                     )}
@@ -347,7 +377,11 @@ export default function Announcements() {
                 <div className="flex justify-end gap-3 p-3 sm:p-4 border-t border-gray-200 bg-gray-50">
                   <button
                     type="button"
-                    onClick={() => setIsCreating(false)}
+                    onClick={() => {
+                      setIsCreating(false);
+                      reset();
+                      setImagePreview(null);
+                    }}
                     className="px-3 sm:px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition-colors"
                   >
                     {t('announcements.addModal.cancel')}

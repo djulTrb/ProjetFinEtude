@@ -128,8 +128,6 @@ export default function PasswordSection() {
       });
       setIsChangingPassword(false);
       
-      // Show success message (you might want to add a toast notification here)
-      alert(t('settings.password.success'));
     } catch (error) {
       console.error('Password update error:', error);
       setErrors({

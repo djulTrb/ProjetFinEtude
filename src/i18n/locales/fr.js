@@ -17,6 +17,7 @@ export default {
     passwordMismatch: "Les mots de passe ne correspondent pas",
     invalidEmail: "Email invalide",
     passwordComplexity: "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial",
+    fileTooLarge: "Le fichier est trop volumineux (maximum 5MB)",
   },
   nav: {
     home: "Accueil",
@@ -46,6 +47,8 @@ export default {
       save: "Enregistrer",
       cancel: "Annuler",
       edit: "Modifier le profil",
+      success: "Profil mis à jour avec succès",
+      updateError: "Une erreur est survenue lors de la mise à jour du profil",
     },
     password: {
       title: "Changer le mot de passe",

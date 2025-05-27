@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { updateProfile } from '../../store/slices/userSlice';
 import { User, Camera, UserCircle, X } from 'phosphor-react';
+import { supabase } from '../../lib/supabase';
+import imageCompression from 'browser-image-compression';
 
 export default function ProfileSection() {
   const { t } = useTranslation();
@@ -10,23 +12,18 @@ export default function ProfileSection() {
   const user = useSelector((state) => state.user);
   const [profileData, setProfileData] = useState({
     name: user.name,
-    email: user.email,
     avatar: user.avatar,
   });
   const [avatarPreview, setAvatarPreview] = useState(user.avatar);
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     if (!profileData.name.trim()) {
       newErrors.name = t('validation.required');
-    }
-    if (!profileData.email.trim()) {
-      newErrors.email = t('validation.required');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = t('validation.invalidEmail');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -47,7 +44,24 @@ export default function ProfileSection() {
     }
   };
 
-  const handleAvatarChange = (e) => {
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1, // Max file size 1MB
+      maxWidthOrHeight: 500, // Max width/height 500px
+      useWebWorker: true, // Use web worker for better performance
+      fileType: 'image/jpeg', // Convert to JPEG for better compression
+    };
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      throw new Error(t('validation.compressionError'));
+    }
+  };
+
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -57,16 +71,31 @@ export default function ProfileSection() {
         });
         return;
       }
-      setProfileData({
-        ...profileData,
-        avatar: file,
-      });
       
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      setIsCompressing(true);
+      try {
+        // Compress the image
+        const compressedFile = await compressImage(file);
+        
+        // Convert compressed file to base64
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result;
+          setProfileData({
+            ...profileData,
+            avatar: base64String,
+          });
+          setAvatarPreview(base64String);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        setErrors({
+          ...errors,
+          avatar: error.message || t('validation.compressionError'),
+        });
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -84,15 +113,38 @@ export default function ProfileSection() {
     
     setIsSubmitting(true);
     try {
+      // Get current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error('No user found');
+      }
+
+      // Update user info in infoUtilisateur table
+      const { error: updateError } = await supabase
+        .from('infoUtilisateur')
+        .update({
+          full_name: profileData.name,
+          avatar: profileData.avatar
+        })
+        .eq('idUser', currentUser.id);
+
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw new Error('Failed to update profile information');
+      }
+
+      // Update Redux store
       dispatch(updateProfile({
         name: profileData.name,
-        email: profileData.email,
-        avatar: avatarPreview,
+        email: user.email,
+        avatar: profileData.avatar,
       }));
+
       setIsEditing(false);
     } catch (error) {
+      console.error('Profile update error:', error);
       setErrors({
-        submit: t('settings.profile.updateError'),
+        submit: error.message || t('settings.profile.updateError'),
       });
     } finally {
       setIsSubmitting(false);
@@ -133,14 +185,17 @@ export default function ProfileSection() {
                   <UserCircle size={32} className="text-gray-400" />
                 )}
               </div>
-              <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center">
+              <label className={`cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg flex items-center ${isCompressing ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <Camera size={16} className="mr-2" />
-                <span className="text-xs sm:text-sm">{t('settings.profile.change')}</span>
+                <span className="text-xs sm:text-sm">
+                  {isCompressing ? t('settings.profile.compressing') : t('settings.profile.change')}
+                </span>
                 <input 
                   type="file" 
                   accept="image/*" 
                   onChange={handleAvatarChange} 
-                  className="hidden" 
+                  className="hidden"
+                  disabled={isCompressing}
                 />
               </label>
             </div>
@@ -165,22 +220,6 @@ export default function ProfileSection() {
             )}
           </div>
           
-          <div className="mb-4">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-              {t('settings.profile.email')}
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={profileData.email}
-              onChange={handleProfileChange}
-              className={`w-full p-2 text-sm border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
-            />
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-500">{errors.email}</p>
-            )}
-          </div>
-          
           {errors.submit && (
             <p className="mb-4 text-xs text-red-500">{errors.submit}</p>
           )}
@@ -188,16 +227,16 @@ export default function ProfileSection() {
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className={`w-full sm:w-auto bg-blue-600 text-white px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-blue-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isSubmitting || isCompressing}
+              className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? t('common.saving') : t('settings.profile.save')}
             </button>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              disabled={isSubmitting}
-              className="w-full sm:w-auto bg-gray-200 text-gray-700 px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-gray-300"
+              disabled={isSubmitting || isCompressing}
+              className="w-full sm:w-auto bg-gray-200 text-gray-700 px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('settings.profile.cancel')}
             </button>
@@ -219,13 +258,13 @@ export default function ProfileSection() {
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-medium text-gray-800">{profileData.name}</h3>
-              <p className="text-xs sm:text-sm text-gray-600">{profileData.email}</p>
+              <p className="text-xs sm:text-sm text-gray-600">{user.email}</p>
             </div>
           </div>
           
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors w-full sm:w-auto"
           >
             {t('settings.profile.edit')}
           </button>

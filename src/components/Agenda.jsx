@@ -238,6 +238,77 @@ export default function Agenda() {
     }
   };
 
+  // Fetch appointments and user data
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get current user from Supabase auth
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      // Fetch user profile
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('infoUtilisateur')
+        .select('*')
+        .eq('idUser', authUser.id)
+        .single();
+
+      if (userProfileError) throw userProfileError;
+
+      // Fetch appointments based on user role
+      let appointmentsQuery = supabase
+        .from('rendez_vous')
+        .select(`
+          *,
+          patient:infoUtilisateur!rendez_vous_patient_id_fkey(
+            full_name,
+            avatar
+          )
+        `);
+
+      if (user.role.toLowerCase() === 'patient') {
+        appointmentsQuery = appointmentsQuery.eq('patient_id', authUser.id);
+      }
+
+      const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
+      if (appointmentsError) throw appointmentsError;
+
+      // Transform appointments data
+      const transformedAppointments = appointmentsData.map(appointment => ({
+        id: appointment.id,
+        patientId: appointment.patient_id,
+        patientName: appointment.patient?.full_name || 'Unknown',
+        profilePicture: appointment.patient?.avatar,
+        date: appointment.date_heure,
+        type: appointment.type_rendez_vous,
+        status: appointment.statut,
+        note: appointment.note,
+        telephone: appointment.telephone
+      }));
+
+      setAppointments(transformedAppointments);
+
+      // Check for active appointment
+      const activeAppointment = transformedAppointments.find(
+        app => app.status === 'en_attente' || app.status === 'accepte'
+      );
+
+      if (activeAppointment) {
+        setActiveAppointment(activeAppointment);
+        setHasActiveAppointment(true);
+        localStorage.setItem('activeAppointment', JSON.stringify(activeAppointment));
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle form submission
   const onSubmit = async (data) => {
     try {
@@ -249,24 +320,25 @@ export default function Agenda() {
       if (authError) throw authError;
       if (!authUser) throw new Error('No authenticated user found');
 
-      // First, ensure the user has a profile
+      // First, ensure the user has a profile in infoUtilisateur
       const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
+        .from('infoUtilisateur')
         .select('*')
-        .eq('id', authUser.id)
+        .eq('idUser', authUser.id)
         .single();
 
       // If profile doesn't exist, create it
       if (!existingProfile) {
         const { error: createProfileError } = await supabase
-          .from('profiles')
+          .from('infoUtilisateur')
           .upsert([{
-            id: authUser.id,
+            idUser: authUser.id,
             email: authUser.email,
             full_name: authUser.user_metadata?.full_name || 'Unknown',
-            avatar_url: authUser.user_metadata?.avatar_url
+            avatar: authUser.user_metadata?.avatar_url,
+            role: 'patient'
           }], {
-            onConflict: 'id'
+            onConflict: 'idUser'
           });
 
         if (createProfileError) {
@@ -287,20 +359,24 @@ export default function Agenda() {
           note: data.note,
           telephone: data.phone
         }])
-        .select(`
-          *,
-          patient:patient_id (
-            id,
-            email,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select()
         .single();
 
       if (appointmentError) {
         console.error('Error creating appointment:', appointmentError);
         throw appointmentError;
+      }
+
+      // Get the user's profile to ensure we have their name
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('infoUtilisateur')
+        .select('full_name, avatar')
+        .eq('idUser', authUser.id)
+        .single();
+
+      if (userProfileError) {
+        console.error('Error fetching user profile:', userProfileError);
+        throw userProfileError;
       }
 
       // Create notification for doctor
@@ -319,12 +395,12 @@ export default function Agenda() {
         throw notificationError;
       }
 
-      // Update local state
+      // Update local state with the user's actual name
       const newAppointment = {
         id: appointment.id,
         patientId: authUser.id,
-        patientName: appointment.patient?.full_name || authUser.user_metadata?.full_name || 'Unknown',
-        profilePicture: appointment.patient?.avatar_url || authUser.user_metadata?.avatar_url,
+        patientName: userProfile?.full_name || authUser.user_metadata?.full_name || 'Unknown',
+        profilePicture: userProfile?.avatar || authUser.user_metadata?.avatar_url,
         date: appointment.date_heure,
         type: data.appointmentType,
         status: 'en_attente',
@@ -332,9 +408,13 @@ export default function Agenda() {
         telephone: data.phone
       };
 
+      // Update appointments list and set active appointment
       setAppointments(prev => [...prev, newAppointment]);
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
+
+      // Store in localStorage for persistence
+      localStorage.setItem('activeAppointment', JSON.stringify(newAppointment));
 
       // Close modal and reset form
       setShowAppointmentForm(false);
@@ -379,10 +459,14 @@ export default function Agenda() {
   // Get status color
   const getStatusColor = (status) => {
     switch (status) {
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'declined': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'accepte':
+        return 'bg-green-100 text-green-800';
+      case 'en_attente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'refuse':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -654,6 +738,7 @@ export default function Agenda() {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.phone ? 'border-red-500' : 'border-gray-300'
                 }`}
+                disabled={loading}
               />
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
@@ -671,6 +756,7 @@ export default function Agenda() {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.appointmentType ? 'border-red-500' : 'border-gray-300'
                 }`}
+                disabled={loading}
               >
                 <option value="consultation">{t('agenda.appointmentTypes.consultation')}</option>
                 <option value="follow-up">{t('agenda.appointmentTypes.follow-up')}</option>
@@ -697,6 +783,7 @@ export default function Agenda() {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.note ? 'border-red-500' : 'border-gray-300'
                 }`}
+                disabled={loading}
               ></textarea>
               {errors.note && (
                 <p className="mt-1 text-sm text-red-600">{errors.note.message}</p>
@@ -712,14 +799,28 @@ export default function Agenda() {
                   setSelectedHour(null);
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                disabled={loading}
               >
                 {t('common.cancel')}
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center min-w-[100px] ${
+                  loading ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+                disabled={loading}
               >
-                {t('agenda.form.submit')}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {t('agenda.form.submitting')}
+                  </>
+                ) : (
+                  t('agenda.form.submit')
+                )}
               </button>
             </div>
           </form>
@@ -817,7 +918,7 @@ export default function Agenda() {
 
   // Render appointment management view
   const renderAppointmentManagement = () => {
-    if (!hasActiveAppointment || !activeAppointment) return null;
+    if (!hasActiveAppointment || !activeAppointment || user.role.toLowerCase() !== 'patient') return null;
 
     return (
       <div className="h-full flex flex-col items-center justify-center p-4">
@@ -842,19 +943,33 @@ export default function Agenda() {
                 </p>
                 <p>
                   <span className="font-medium">{t('agenda.statusType')}:</span>{' '}
-                  {t(`agenda.status.${activeAppointment.status}`)}
+                  <span className={`inline-block px-2 py-1 rounded ${getStatusColor(activeAppointment.status)}`}>
+                    {t(`agenda.status.${activeAppointment.status}`)}
+                  </span>
                 </p>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col space-y-3">
-            <button
-              onClick={handleChangeAppointment}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {t('agenda.modifyAppointment')}
-            </button>
+            {activeAppointment.status === 'en_attente' && (
+              <button
+                onClick={handleChangeAppointment}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {t('agenda.modifyAppointment')}
+              </button>
+            )}
+            {activeAppointment.status === 'accepte' && (
+              <div className="text-center text-green-600 font-medium">
+                {t('agenda.appointmentAccepted')}
+              </div>
+            )}
+            {activeAppointment.status === 'refuse' && (
+              <div className="text-center text-red-600 font-medium">
+                {t('agenda.appointmentDeclined')}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -863,7 +978,7 @@ export default function Agenda() {
 
   return (
     <div className="h-full flex flex-col">
-      {hasActiveAppointment ? (
+      {hasActiveAppointment && user.role.toLowerCase() === 'patient' ? (
         renderAppointmentManagement()
       ) : (
         <>

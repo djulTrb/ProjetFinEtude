@@ -7,6 +7,7 @@ export default {
     close: "Fermer",
     cancel: "Annuler",
     saving: "Enregistrement...",
+    loading: "Chargement..."
   },
   validation: {
     required: "Ce champ est requis",
@@ -166,7 +167,8 @@ export default {
       optional: "facultatif",
       appointmentType: "Motif du rendez-vous",
       note: "remarques pour le médecin",
-      submit: "Demander un rendez-vous"
+      submit: "Demander un rendez-vous",
+      submitting: "Envoi en cours..."
     }
   },
   appointmentRequests: {

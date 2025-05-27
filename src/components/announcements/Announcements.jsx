@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { supabase } from '../../lib/supabase';
 import { Megaphone, Plus, Trash, X, Image } from 'phosphor-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
+import { updateUser } from '../../store/slices/userSlice';
 
 export default function Announcements() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const userRole = useSelector((state) => state.user.role);
+  const dispatch = useDispatch();
+  const userRole = useSelector((state) => state.user.role) || localStorage.getItem('userRole');
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,6 +20,16 @@ export default function Announcements() {
   const [isCreating, setIsCreating] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   
+  console.log('Current userRole:', userRole);
+
+  useEffect(() => {
+    // Sync user role from localStorage to Redux if needed
+    const storedRole = localStorage.getItem('userRole');
+    if (storedRole && storedRole !== userRole) {
+      dispatch(updateUser({ role: storedRole }));
+    }
+  }, [dispatch, userRole]);
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
       titre: '',
@@ -151,13 +163,16 @@ export default function Announcements() {
     <div className="w-full max-w-[2000px] mx-auto py-4 sm:py-6 px-2 sm:px-4 md:px-6">
       {/* Header with Add Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">
-            {t('announcements.title')}
-          </h1>
-          <p className="text-gray-500 text-sm sm:text-base">
-            {t('announcements.subtitle')}
-          </p>
+        <div className="flex items-center gap-3">
+          
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">
+              {t('announcements.title')}
+            </h1>
+            <p className="text-gray-500 text-sm sm:text-base">
+              {t('announcements.subtitle')}
+            </p>
+          </div>
         </div>
         {userRole === 'doctor' && (
           <button

@@ -228,32 +228,33 @@ export default {
   },
   announcements: {
     title: "Annonces",
-    subtitle: "Gérez et publiez vos annonces",
+    subtitle: "Restez informé des dernières nouvelles et mises à jour",
     addButton: "Ajouter une annonce",
-    noAnnouncements: "Aucune annonce pour le moment",
-    addAnnouncementHint: "Cliquez sur \"Ajouter une annonce\" pour commencer",
-    addModal: {
-      title: "Ajouter une annonce",
-      titleLabel: "Titre de l'annonce",
-      titlePlaceholder: "Titre de l'annonce",
-      contentLabel: "Contenu",
-      contentPlaceholder: "Contenu de l'annonce",
-      photoLabel: "Photo (optionnelle)",
-      addPhoto: "Ajouter une photo",
-      removePhoto: "Supprimer la photo",
-      cancel: "Annuler",
-      publish: "Publier",
-      update: "Mettre à jour"
-    },
-    deleteModal: {
-      title: "Supprimer l'annonce",
-      confirmation: "Êtes-vous sûr de vouloir supprimer l'annonce \"{{title}}\" ?",
-      warning: "Cette action est irréversible.",
-      cancel: "Annuler",
-      delete: "Supprimer"
+    noAnnouncements: "Aucune annonce disponible",
+    addAnnouncementHint: "Cliquez sur le bouton ci-dessus pour créer votre première annonce",
+    error: {
+      title: "Une erreur est survenue",
+      dismiss: "Fermer",
+      retry: "Réessayer"
     },
     card: {
       delete: "Supprimer"
+    },
+    addModal: {
+      title: "Créer une annonce",
+      titleLabel: "Titre",
+      titlePlaceholder: "Entrez le titre de l'annonce",
+      titleRequired: "Veuillez entrer un titre",
+      titleTooLong: "Le titre ne doit pas dépasser 150 caractères",
+      contentLabel: "Contenu",
+      contentPlaceholder: "Entrez le contenu de l'annonce",
+      contentRequired: "Veuillez entrer un contenu",
+      contentTooLong: "Le contenu ne doit pas dépasser 3000 caractères",
+      photoLabel: "Photo",
+      addPhoto: "Ajouter une photo",
+      removePhoto: "Supprimer la photo",
+      cancel: "Annuler",
+      publish: "Publier"
     }
   },
   roles: {

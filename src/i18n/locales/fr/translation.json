@@ -1,16 +1,33 @@
 {
   "announcements": {
     "title": "Annonces",
-    "create": "Créer une annonce",
-    "content": "Contenu",
-    "image": "Image URL",
-    "empty": {
-      "title": "Aucune annonce",
-      "message": "Il n'y a pas encore d'annonces à afficher."
-    },
+    "subtitle": "Restez informé des dernières nouvelles et mises à jour",
+    "addButton": "Ajouter une annonce",
+    "noAnnouncements": "Aucune annonce disponible",
+    "addAnnouncementHint": "Cliquez sur le bouton ci-dessus pour créer votre première annonce",
     "error": {
-      "title": "Erreur de chargement",
+      "title": "Une erreur est survenue",
+      "dismiss": "Fermer",
       "retry": "Réessayer"
+    },
+    "card": {
+      "delete": "Supprimer"
+    },
+    "addModal": {
+      "title": "Créer une annonce",
+      "titleLabel": "Titre",
+      "titlePlaceholder": "Entrez le titre de l'annonce",
+      "titleRequired": "Veuillez entrer un titre",
+      "titleTooLong": "Le titre ne doit pas dépasser 150 caractères",
+      "contentLabel": "Contenu",
+      "contentPlaceholder": "Entrez le contenu de l'annonce",
+      "contentRequired": "Veuillez entrer un contenu",
+      "contentTooLong": "Le contenu ne doit pas dépasser 3000 caractères",
+      "photoLabel": "Photo",
+      "addPhoto": "Ajouter une photo",
+      "removePhoto": "Supprimer la photo",
+      "cancel": "Annuler",
+      "publish": "Publier"
     }
   }
 } 

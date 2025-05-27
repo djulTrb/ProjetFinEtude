@@ -218,32 +218,33 @@ export default {
   },
   announcements: {
     title: "الإعلانات",
-    subtitle: "إدارة ونشر إعلاناتك",
+    subtitle: "ابق على اطلاع بآخر الأخبار والتحديثات",
     addButton: "إضافة إعلان",
-    noAnnouncements: "لا توجد إعلانات حالياً",
-    addAnnouncementHint: "انقر على \"إضافة إعلان\" للبدء",
-    addModal: {
-      title: "إضافة إعلان",
-      titleLabel: "عنوان الإعلان",
-      titlePlaceholder: "عنوان الإعلان",
-      contentLabel: "المحتوى",
-      contentPlaceholder: "محتوى الإعلان",
-      photoLabel: "صورة (اختياري)",
-      addPhoto: "إضافة صورة",
-      removePhoto: "حذف الصورة",
-      cancel: "إلغاء",
-      publish: "نشر",
-      update: "تحديث"
-    },
-    deleteModal: {
-      title: "حذف الإعلان",
-      confirmation: "هل أنت متأكد أنك تريد حذف الإعلان \"{{title}}\"؟",
-      warning: "هذا الإجراء لا يمكن التراجع عنه.",
-      cancel: "إلغاء",
-      delete: "حذف"
+    noAnnouncements: "لا توجد إعلانات متاحة",
+    addAnnouncementHint: "انقر على الزر أعلاه لإنشاء إعلانك الأول",
+    error: {
+      title: "حدث خطأ",
+      dismiss: "إغلاق",
+      retry: "إعادة المحاولة"
     },
     card: {
       delete: "حذف"
+    },
+    addModal: {
+      title: "إنشاء إعلان",
+      titleLabel: "العنوان",
+      titlePlaceholder: "أدخل عنوان الإعلان",
+      titleRequired: "الرجاء إدخال عنوان",
+      titleTooLong: "يجب ألا يتجاوز العنوان 150 حرفًا",
+      contentLabel: "المحتوى",
+      contentPlaceholder: "أدخل محتوى الإعلان",
+      contentRequired: "الرجاء إدخال محتوى",
+      contentTooLong: "يجب ألا يتجاوز المحتوى 3000 حرف",
+      photoLabel: "الصورة",
+      addPhoto: "إضافة صورة",
+      removePhoto: "حذف الصورة",
+      cancel: "إلغاء",
+      publish: "نشر"
     }
   },
   roles: {

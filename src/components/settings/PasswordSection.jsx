@@ -92,9 +92,15 @@ export default function PasswordSection() {
 
     setIsSubmitting(true);
     try {
+      // Get the current user's email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No user found');
+      }
+
       // First, verify the current password by attempting to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: supabase.auth.getUser().then(({ data }) => data.user.email),
+        email: user.email,
         password: passwordData.currentPassword,
       });
 
@@ -248,7 +254,7 @@ export default function PasswordSection() {
           </p>
           <button
             onClick={() => setIsChangingPassword(true)}
-            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 text-xs sm:text-sm rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors w-full sm:w-auto"
           >
             {t('settings.password.change')}
           </button>

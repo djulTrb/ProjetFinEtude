@@ -1,13 +1,18 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { SignOut } from 'phosphor-react';
+import { useDispatch } from 'react-redux';
+import { clearUser } from '../../store/slices/userSlice';
 
 export default function DisconnectSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleDisconnect = () => {
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userState');
+    dispatch(clearUser());
     navigate('/inscription');
   };
 

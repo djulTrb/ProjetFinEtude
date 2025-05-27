@@ -8,7 +8,7 @@ export default function Header({ onShowNotifications }) {
   const user = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const isSidebarOpen = useSelector((state) => state.sidebar.isOpen);
-  const isDoctor = user.role.toLowerCase() === 'doctor';
+  const isDoctor = user.role?.toLowerCase() === 'doctor';
 
   const toggleSidebar = () => {
     dispatch(setSidebarOpen(!isSidebarOpen));
@@ -45,14 +45,14 @@ export default function Header({ onShowNotifications }) {
               ) : (
                 <>
                   <p className="text-sm font-medium text-gray-800">{t('common.greeting')}, {user.name}</p>
-                  <p className="text-xs text-gray-600">{t(`roles.${user.role.toLowerCase()}`)}</p>
+                  <p className="text-xs text-gray-600">{t(`roles.${user.role?.toLowerCase()}`)}</p>
                 </>
               )}
             </div>
           </div>
 
-          {/* Notification bell - only visible for patients */}
-          {!isDoctor && (
+          {/* Notification bell - only visible for doctors */}
+          {isDoctor && (
             <button
               onClick={onShowNotifications}
               className="p-2 hover:bg-gray-100/60 rounded-full relative"

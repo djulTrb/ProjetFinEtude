@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import Inscription from './components/auth/Inscription';
 import PatientRegistration from './components/auth/PatientRegistration';
 import Agenda from './components/Agenda';
-import Announcements from './components/Annonces';
+import Announcements from './components/announcements/Announcements';
 import Parameters from './components/Parameters';
 import Layout from './components/Layout';
 import TableauDeBord from './components/TableauDeBord';

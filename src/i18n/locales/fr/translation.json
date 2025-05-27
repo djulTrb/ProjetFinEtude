@@ -1,0 +1,16 @@
+{
+  "announcements": {
+    "title": "Annonces",
+    "create": "Créer une annonce",
+    "content": "Contenu",
+    "image": "Image URL",
+    "empty": {
+      "title": "Aucune annonce",
+      "message": "Il n'y a pas encore d'annonces à afficher."
+    },
+    "error": {
+      "title": "Erreur de chargement",
+      "retry": "Réessayer"
+    }
+  }
+} 

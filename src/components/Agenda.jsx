@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Calendar, CaretLeft, CaretRight, Clock, Check, X, Plus, Lock, LockOpen, User, Note, List } from 'phosphor-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isSameHour, setHours, getHours, addDays, getMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { blockDay, unblockDay, blockHour, unblockHour } from '../store/slices/appointmentsSlice';
+import { blockDay, unblockDay, blockHour, unblockHour, setBlockedTimes } from '../store/slices/appointmentsSlice';
 import { setSidebarOpen } from '../store/slices/sidebarSlice';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
@@ -112,24 +112,53 @@ export default function Agenda() {
   };
 
   // Handle blocking/unblocking a time slot
-  const handleTimeSlotBlock = (date, timeSlot) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    if (isTimeSlotBlocked(date, timeSlot)) {
-      dispatch(unblockHour({ 
-        date: formattedDate, 
-        hour: timeSlot.hour,
-        minutes: timeSlot.minutes 
-      }));
-    } else {
-      // Don't block if there's an appointment
-      const hasAppointment = getAppointmentsForTimeSlot(date, timeSlot).length > 0;
-      if (!hasAppointment) {
-        dispatch(blockHour({ 
+  const handleTimeSlotBlock = async (date, timeSlot) => {
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      if (isTimeSlotBlocked(date, timeSlot)) {
+        // Unblock: delete from creneaux_bloques
+        const { error: deleteError } = await supabase
+          .from('creneaux_bloques')
+          .delete()
+          .eq('date', formattedDate)
+          .eq('heure', timeSlot.hour)
+          .eq('minutes', timeSlot.minutes)
+          .eq('type_blocage', 'heure');
+
+        if (deleteError) throw deleteError;
+
+        dispatch(unblockHour({ 
           date: formattedDate, 
           hour: timeSlot.hour,
-          minutes: timeSlot.minutes
+          minutes: timeSlot.minutes 
         }));
+      } else {
+        // Don't block if there's an appointment
+        const hasAppointment = getAppointmentsForTimeSlot(date, timeSlot).length > 0;
+        if (!hasAppointment) {
+          // Block: insert into creneaux_bloques
+          const { error: insertError } = await supabase
+            .from('creneaux_bloques')
+            .insert([{
+              date: formattedDate,
+              heure: timeSlot.hour,
+              minutes: timeSlot.minutes,
+              type_blocage: 'heure',
+              raison: null
+            }]);
+
+          if (insertError) throw insertError;
+
+          dispatch(blockHour({ 
+            date: formattedDate, 
+            hour: timeSlot.hour,
+            minutes: timeSlot.minutes
+          }));
+        }
       }
+    } catch (error) {
+      console.error('Error handling time slot block:', error);
+      setError(error.message);
     }
   };
 
@@ -253,9 +282,32 @@ export default function Agenda() {
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results
+        .maybeSingle();
 
       if (userProfileError) throw userProfileError;
+
+      // Fetch blocked times from creneaux_bloques
+      const { data: blockedTimesData, error: blockedTimesError } = await supabase
+        .from('creneaux_bloques')
+        .select('*');
+
+      if (blockedTimesError) throw blockedTimesError;
+
+      // Transform blocked times data
+      const blockedDays = blockedTimesData
+        .filter(block => block.type_blocage === 'jour')
+        .map(block => format(new Date(block.date), 'yyyy-MM-dd'));
+
+      const blockedHours = blockedTimesData
+        .filter(block => block.type_blocage === 'heure')
+        .map(block => ({
+          date: format(new Date(block.date), 'yyyy-MM-dd'),
+          hour: block.heure,
+          minutes: block.minutes
+        }));
+
+      // Update Redux store with blocked times
+      dispatch(setBlockedTimes({ days: blockedDays, hours: blockedHours }));
 
       // Fetch appointments based on user role
       let appointmentsQuery = supabase
@@ -389,20 +441,20 @@ export default function Agenda() {
         note: data.note,
         telephone: data.phone
       };
-
+      
       // Update appointments list and set active appointment
       setAppointments(prev => [...prev, newAppointment]);
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
-
+      
       // Store in localStorage for persistence
       localStorage.setItem('activeAppointment', JSON.stringify(newAppointment));
 
       // Close modal and reset form
-      setShowAppointmentForm(false);
-      setSelectedHour(null);
+        setShowAppointmentForm(false);
+        setSelectedHour(null);
       setSelectedMinutes(null);
-      setSelectedDate(null);
+        setSelectedDate(null);
       reset();
     } catch (error) {
       console.error('Error saving appointment:', error);
@@ -430,8 +482,8 @@ export default function Agenda() {
 
       // Update local state
       setAppointments(prev => prev.filter(app => app.id !== activeAppointment.id));
-      setHasActiveAppointment(false);
-      setActiveAppointment(null);
+    setHasActiveAppointment(false);
+    setActiveAppointment(null);
       localStorage.removeItem('activeAppointment');
     } catch (error) {
       console.error('Error changing appointment:', error);
@@ -507,18 +559,39 @@ export default function Agenda() {
   };
  
   // Handle blocking/unblocking a day
-  const handleDayBlock = (date) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    if (isDayBlocked(date)) {
-      dispatch(unblockDay(formattedDate));
-      // Dispatch an action to clear any individual hour blocks for that day
-      blockedTimes.hours.forEach(block => {
-        if (block.date === formattedDate) {
-          dispatch(unblockHour({ date: formattedDate, hour: block.hour }));
-        }
-      });
-    } else {
-      dispatch(blockDay(formattedDate));
+  const handleDayBlock = async (date) => {
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      if (isDayBlocked(date)) {
+        // Unblock: delete from creneaux_bloques
+        const { error: deleteError } = await supabase
+          .from('creneaux_bloques')
+          .delete()
+          .eq('date', formattedDate)
+          .eq('type_blocage', 'jour');
+
+        if (deleteError) throw deleteError;
+
+        dispatch(unblockDay(formattedDate));
+      } else {
+        // Block: insert into creneaux_bloques
+        const { error: insertError } = await supabase
+          .from('creneaux_bloques')
+          .insert([{
+            date: formattedDate,
+            heure: 0,
+            minutes: 0,
+            type_blocage: 'jour',
+            raison: null
+          }]);
+
+        if (insertError) throw insertError;
+
+        dispatch(blockDay(formattedDate));
+      }
+    } catch (error) {
+      console.error('Error handling day block:', error);
+      setError(error.message);
     }
   };
 
@@ -592,9 +665,9 @@ export default function Agenda() {
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center">
-                  <span className={`font-medium text-xs sm:text-sm ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                    {format(day, 'd')}
-                  </span>
+                <span className={`font-medium text-xs sm:text-sm ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                  {format(day, 'd')}
+                </span>
                   {isStacked && (
                     <span className="ml-2 text-xs text-gray-500">
                       {getDayName(day, isMobile)}
@@ -678,9 +751,9 @@ export default function Agenda() {
                         {isBlocked ? <Lock size={18} /> : <LockOpen size={18} />}
                       </button>
                     )}
-                  </div>
-                );
-              })}
+            </div>
+          );
+        })}
             </div>
           </div>
           
@@ -883,8 +956,8 @@ export default function Agenda() {
                 ) : (
                   t('agenda.form.submit')
                 )}
-              </button>
-            </div>
+                      </button>
+                  </div>
           </form>
         </div>
       </div>
@@ -928,12 +1001,12 @@ export default function Agenda() {
 
           <div className="flex flex-col space-y-3">
             {activeAppointment.status === 'en_attente' && (
-              <button
-                onClick={handleChangeAppointment}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {t('agenda.modifyAppointment')}
-              </button>
+            <button
+              onClick={handleChangeAppointment}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {t('agenda.modifyAppointment')}
+            </button>
             )}
             {activeAppointment.status === 'accepte' && (
               <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -943,7 +1016,7 @@ export default function Agenda() {
                 <p className="text-sm text-green-600 mt-2">
                   {t('agenda.appointmentAcceptedMessage')}
                 </p>
-              </div>
+          </div>
             )}
             {activeAppointment.status === 'refuse' && (
               <div className="text-center p-4 bg-red-50 rounded-lg">

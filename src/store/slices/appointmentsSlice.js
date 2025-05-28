@@ -62,6 +62,9 @@ export const appointmentsSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
     },
+    setBlockedTimes: (state, action) => {
+      state.blockedTimes = action.payload;
+    },
   },
 });
 
@@ -76,6 +79,7 @@ export const {
   unblockHour,
   setLoading,
   setError,
+  setBlockedTimes,
 } = appointmentsSlice.actions;
 
 export default appointmentsSlice.reducer; 

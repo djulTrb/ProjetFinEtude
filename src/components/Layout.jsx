@@ -5,46 +5,13 @@ import { setSidebarOpen } from '../store/slices/sidebarSlice';
 import { useTranslation } from 'react-i18next';
 import Header from "./Header";
 import Sidebar from "./Sidebar";
-import NotificationsModal from "./NotificationsModal";
 
 export default function Layout() {
-  const [showNotifications, setShowNotifications] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dispatch = useDispatch();
   const isSidebarOpen = useSelector((state) => state.sidebar.isOpen);
   const userRole = useSelector((state) => state.user.role);
   const { t, i18n } = useTranslation();
-  
-  // Get notifications based on current language and user role
-  const [notifications, setNotifications] = useState([]);
-
-  // Update notifications when language changes
-  useEffect(() => {
-    if (userRole?.toLowerCase() === 'doctor') {
-      setNotifications([
-        {
-          id: 1,
-          message: i18n.language === 'fr' 
-            ? "Nouvelle demande de rendez-vous" 
-            : "طلب موعد جديد",
-          time: i18n.language === 'fr' 
-            ? "Il y a 2 heures" 
-            : "قبل ساعتين",
-        },
-        { 
-          id: 2, 
-          message: i18n.language === 'fr' 
-            ? "Réponse du médecin reçue" 
-            : "تم استلام رد من الطبيب", 
-          time: i18n.language === 'fr' 
-            ? "Il y a 5 heures" 
-            : "قبل 5 ساعات" 
-        },
-      ]);
-    } else {
-      setNotifications([]);
-    }
-  }, [i18n.language, userRole]);
 
   // Check if screen is mobile size
   useEffect(() => {
@@ -69,7 +36,7 @@ export default function Layout() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-quicksand">
       {/* Header */}
-      <Header onShowNotifications={() => setShowNotifications(!showNotifications)} />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation */}
@@ -80,15 +47,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-
-      {/* Notifications Modal - only show if user is a doctor */}
-      {userRole?.toLowerCase() === 'doctor' && (
-        <NotificationsModal
-          show={showNotifications}
-          onClose={() => setShowNotifications(false)}
-          notifications={notifications}
-        />
-      )}
     </div>
   );
 }

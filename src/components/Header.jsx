@@ -30,8 +30,8 @@ export default function Header({ onShowNotifications }) {
           <div className="hidden min-[800px]:flex items-center space-x-4">
             <div className="w-10 h-10 rounded-full bg-sky-600 flex items-center justify-center overflow-hidden">
               {user.avatar ? (
-                <img
-                  src={user.avatar}
+                <img 
+                  src={user.avatar} 
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -50,17 +50,6 @@ export default function Header({ onShowNotifications }) {
               )}
             </div>
           </div>
-
-          {/* Notification bell - only visible for doctors */}
-          {isDoctor && (
-            <button
-              onClick={onShowNotifications}
-              className="p-2 hover:bg-gray-100/60 rounded-full relative"
-            >
-              <Bell weight="bold" className="text-gray-600 text-xl" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-          )}
         </div>
       </div>
     </header>

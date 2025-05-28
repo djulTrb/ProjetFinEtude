@@ -408,14 +408,17 @@ export default function Agenda() {
         throw new Error('User profile name not found');
       }
 
-      // Create appointment record
+      // Create appointment record with time adjusted by -1 hour
+      const appointmentDate = new Date(selectedDate);
+      appointmentDate.setHours(selectedHour - 1, selectedMinutes || 0, 0, 0);
+
       const { data: appointment, error: appointmentError } = await supabase
         .from('rendez_vous')
         .insert([{
           id: uuidv4(),
           patient_id: authUser.id,
           patient_full_name: userProfile.full_name,
-          date_heure: `${format(selectedDate, 'yyyy-MM-dd')}T${String(selectedHour).padStart(2, '0')}:${String(selectedMinutes || 0).padStart(2, '0')}:00`,
+          date_heure: format(appointmentDate, "yyyy-MM-dd'T'HH:mm:ss"),
           type_rendez_vous: data.appointmentType,
           statut: 'en_attente',
           note: data.note,
@@ -451,10 +454,10 @@ export default function Agenda() {
       localStorage.setItem('activeAppointment', JSON.stringify(newAppointment));
 
       // Close modal and reset form
-        setShowAppointmentForm(false);
-        setSelectedHour(null);
+      setShowAppointmentForm(false);
+      setSelectedHour(null);
       setSelectedMinutes(null);
-        setSelectedDate(null);
+      setSelectedDate(null);
       reset();
     } catch (error) {
       console.error('Error saving appointment:', error);

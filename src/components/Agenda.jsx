@@ -253,7 +253,7 @@ export default function Agenda() {
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results
 
       if (userProfileError) throw userProfileError;
 
@@ -279,7 +279,7 @@ export default function Agenda() {
       const transformedAppointments = appointmentsData.map(appointment => ({
         id: appointment.id,
         patientId: appointment.patient_id,
-        patientName: appointment.patient?.full_name || 'Unknown',
+        patientName: appointment.patient_full_name || appointment.patient?.full_name || 'Unknown',
         profilePicture: appointment.patient?.avatar_url,
         date: appointment.date_heure,
         type: appointment.type_rendez_vous,
@@ -290,10 +290,17 @@ export default function Agenda() {
 
       setAppointments(transformedAppointments);
 
-      // Check for active appointment - show all appointments including rejected ones
-      const activeAppointment = transformedAppointments.find(
-        app => app.status === 'accepte' || app.status === 'en_attente' || app.status === 'refuse'
-      );
+      // Check for active appointment
+      const now = new Date();
+      const activeAppointment = transformedAppointments.find(app => {
+        const appointmentDate = new Date(app.date);
+        // For accepted appointments, only show if the date hasn't passed
+        if (app.status === 'accepte') {
+          return appointmentDate > now;
+        }
+        // For pending or refused appointments, show them regardless of date
+        return app.status === 'en_attente' || app.status === 'refuse';
+      });
 
       if (activeAppointment) {
         setActiveAppointment(activeAppointment);
@@ -333,39 +340,29 @@ export default function Agenda() {
       if (authError) throw authError;
       if (!authUser) throw new Error('No authenticated user found');
 
-      // First, ensure the user has a profile in infoUtilisateur
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('infoUtilisateur')
-        .select('*')
-        .eq('idUser', authUser.id)
+      // Get the user's profile to ensure we have their name
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', authUser.id)
         .single();
 
-      // If profile doesn't exist, create it
-      if (!existingProfile) {
-        const { error: createProfileError } = await supabase
-          .from('infoUtilisateur')
-          .upsert([{
-            idUser: authUser.id,
-            email: authUser.email,
-            full_name: authUser.user_metadata?.full_name || 'Unknown',
-            avatar: authUser.user_metadata?.avatar_url,
-            role: 'patient'
-          }], {
-            onConflict: 'idUser'
-          });
-
-        if (createProfileError) {
-          console.error('Error creating profile:', createProfileError);
-          throw createProfileError;
-        }
+      if (userProfileError) {
+        console.error('Error fetching user profile:', userProfileError);
+        throw userProfileError;
       }
-      
+
+      if (!userProfile?.full_name) {
+        throw new Error('User profile name not found');
+      }
+
       // Create appointment record
       const { data: appointment, error: appointmentError } = await supabase
         .from('rendez_vous')
         .insert([{
           id: uuidv4(),
           patient_id: authUser.id,
+          patient_full_name: userProfile.full_name,
           date_heure: `${format(selectedDate, 'yyyy-MM-dd')}T${String(selectedHour).padStart(2, '0')}:${String(selectedMinutes || 0).padStart(2, '0')}:00`,
           type_rendez_vous: data.appointmentType,
           statut: 'en_attente',
@@ -380,40 +377,12 @@ export default function Agenda() {
         throw appointmentError;
       }
 
-      // Get the user's profile to ensure we have their name
-      const { data: userProfile, error: userProfileError } = await supabase
-        .from('infoUtilisateur')
-        .select('full_name, avatar')
-        .eq('idUser', authUser.id)
-        .single();
-
-      if (userProfileError) {
-        console.error('Error fetching user profile:', userProfileError);
-        throw userProfileError;
-      }
-
-      // Create notification for doctor
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert([{
-          id: uuidv4(),
-          user_id: authUser.id,
-          type: 'nouvelle_demande',
-          message: 'Nouvelle demande de rendez-vous',
-          lu: false
-        }]);
-
-      if (notificationError) {
-        console.error('Error creating notification:', notificationError);
-        throw notificationError;
-      }
-
       // Update local state with the user's actual name
       const newAppointment = {
         id: appointment.id,
         patientId: authUser.id,
-        patientName: userProfile?.full_name || authUser.user_metadata?.full_name || 'Unknown',
-        profilePicture: userProfile?.avatar || authUser.user_metadata?.avatar_url,
+        patientName: userProfile.full_name,
+        profilePicture: userProfile?.avatar_url,
         date: appointment.date_heure,
         type: data.appointmentType,
         status: 'en_attente',
@@ -444,17 +413,32 @@ export default function Agenda() {
   };
 
   // Handle appointment modification
-  const handleModifyAppointment = () => {
-    setHasActiveAppointment(false);
-    setActiveAppointment(null);
-    // Reset to calendar view
-  };
+  const handleChangeAppointment = async () => {
+    try {
+      setLoading(true);
+      
+      // Delete the refused appointment from the database
+      const { error: deleteError } = await supabase
+        .from('rendez_vous')
+        .delete()
+        .eq('id', activeAppointment.id);
 
-  // Handle appointment modification
-  const handleChangeAppointment = () => {
-    setHasActiveAppointment(false);
-    setActiveAppointment(null);
-    localStorage.removeItem('activeAppointment');
+      if (deleteError) {
+        console.error('Error deleting appointment:', deleteError);
+        throw deleteError;
+      }
+
+      // Update local state
+      setAppointments(prev => prev.filter(app => app.id !== activeAppointment.id));
+      setHasActiveAppointment(false);
+      setActiveAppointment(null);
+      localStorage.removeItem('activeAppointment');
+    } catch (error) {
+      console.error('Error changing appointment:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle appointment deletion
@@ -677,7 +661,7 @@ export default function Agenda() {
                         </span>
                       ) : (
                         <span className="text-xs text-red-600">
-                          {t('agenda.blocked')}
+                          {hasActiveAppointment ? t('agenda.appointment') : t('agenda.blocked')}
                         </span>
                       )}
                     </div>

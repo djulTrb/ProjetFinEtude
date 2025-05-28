@@ -35,7 +35,7 @@ export default function AppointmentRequests() {
         const transformedRequests = data.map(request => ({
           id: request.id,
           patientId: request.patient_id,
-          patientName: request.patient?.full_name || 'Unknown',
+          patientName: request.patient_full_name,
           profilePicture: request.patient?.avatar_url,
           date: request.date_heure,
           type: request.type_rendez_vous,
@@ -65,36 +65,6 @@ export default function AppointmentRequests() {
         .eq('id', requestId);
 
       if (updateError) throw updateError;
-
-      // Create response record
-      const { error: responseError } = await supabase
-        .from('reponses_rendez_vous')
-        .insert([{
-          id: uuidv4(),
-          rendez_vous_id: requestId,
-          reponse: action === 'accept' ? 'accepte' : 'refuse',
-          message: action === 'accept' ? 'Rendez-vous accepté' : 'Rendez-vous refusé'
-        }]);
-
-      if (responseError) throw responseError;
-
-      // Create notification for patient
-      const request = requests.find(r => r.id === requestId);
-      if (request) {
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert([{
-            id: uuidv4(),
-            user_id: request.patientId,
-            type: action === 'accept' ? 'rendez_vous_accepte' : 'rendez_vous_refuse',
-            message: action === 'accept' 
-              ? 'Votre demande de rendez-vous a été acceptée'
-              : 'Votre demande de rendez-vous a été refusée',
-            lu: false
-          }]);
-
-        if (notificationError) throw notificationError;
-      }
 
       // Update local state
       setRequests(prevRequests => 

@@ -82,7 +82,7 @@ export default function LoginPage() {
       const { data: userData, error: userError } = await supabase
         .from('infoUtilisateur')
         .select('*')
-        .eq('id', authData.user.id)
+        .eq('idUser', authData.user.id)
         .single();
 
       if (userError) {
@@ -90,9 +90,40 @@ export default function LoginPage() {
         return;
       }
 
+      // Check if profile exists
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      // If profile doesn't exist, create it
+      if (profileError && profileError.code === 'PGRST116') {
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              full_name: userData.full_name,
+              email: userData.email,
+              avatar_url: userData.avatar
+            }
+          ]);
+
+        if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
+          setError(t('auth.loginError'));
+          return;
+        }
+      } else if (profileError) {
+        console.error('Error checking profile:', profileError);
+        setError(t('auth.loginError'));
+        return;
+      }
+
       // Update state with user info
       setUserInfo({
-        id: userData.id,
+        id: userData.idUser,
         email: userData.email,
         role: userData.role,
         avatar: userData.avatar
@@ -194,26 +225,6 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
-              <div className="mt-2 text-xs text-gray-500">
-                <p>{t('settings.password.requirements')}</p>
-                <ul className="list-disc list-inside mt-1">
-                  <li className={password?.length >= 8 ? 'text-green-500' : ''}>
-                    {t('settings.password.length')}
-                  </li>
-                  <li className={/[A-Z]/.test(password || '') ? 'text-green-500' : ''}>
-                    {t('settings.password.uppercase')}
-                  </li>
-                  <li className={/[a-z]/.test(password || '') ? 'text-green-500' : ''}>
-                    {t('settings.password.lowercase')}
-                  </li>
-                  <li className={/\d/.test(password || '') ? 'text-green-500' : ''}>
-                    {t('settings.password.number')}
-                  </li>
-                  <li className={/[!@#$%^&*(),.?":{}|<>]/.test(password || '') ? 'text-green-500' : ''}>
-                    {t('settings.password.special')}
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
 
@@ -243,4 +254,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}

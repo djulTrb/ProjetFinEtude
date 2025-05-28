@@ -77,6 +77,25 @@ export default function PatientRegistration() {
         return;
       }
 
+      // Create profile in profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            full_name: data.fullName,
+            email: data.email,
+            avatar_url: null,
+            role: 'patient'
+          }
+        ]);
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        setError(t('auth.registrationError'));
+        return;
+      }
+
       setSuccess(true);
       
       setUserInfo({

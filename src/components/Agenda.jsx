@@ -143,8 +143,7 @@ export default function Agenda() {
               date: formattedDate,
               heure: timeSlot.hour,
               minutes: timeSlot.minutes,
-              type_blocage: 'heure',
-              raison: null
+              type_blocage: 'heure'
             }]);
 
           if (insertError) throw insertError;
@@ -584,8 +583,7 @@ export default function Agenda() {
             date: formattedDate,
             heure: 0,
             minutes: 0,
-            type_blocage: 'jour',
-            raison: null
+            type_blocage: 'jour'
           }]);
 
         if (insertError) throw insertError;

@@ -57,28 +57,8 @@ export default function PatientRegistration() {
         return;
       }
 
-      // Create user info in infoUtilisateur table
-      const { data: userData, error: userError } = await supabase
-        .from('infoUtilisateur')
-        .insert([
-          {
-            idUser: authData.user.id,
-            email: data.email,
-            role: 'patient',
-            full_name: data.fullName,
-            avatar: null
-          },
-        ])
-        .select()
-        .single();
-
-      if (userError) {
-        setError(t('auth.registrationError'));
-        return;
-      }
-
       // Create profile in profiles table
-      const { error: profileError } = await supabase
+      const { data: userData, error: profileError } = await supabase
         .from('profiles')
         .insert([
           {
@@ -86,9 +66,12 @@ export default function PatientRegistration() {
             full_name: data.fullName,
             email: data.email,
             avatar_url: null,
+            avatar: null,
             role: 'patient'
-          }
-        ]);
+          },
+        ])
+        .select()
+        .single();
 
       if (profileError) {
         console.error('Error creating profile:', profileError);

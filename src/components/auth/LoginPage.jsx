@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Envelope, Lock } from 'phosphor-react';
 import { supabase } from '../../lib/supabase';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../../store/userSlice';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -78,56 +80,27 @@ export default function LoginPage() {
         return;
       }
 
-      // Get user info from infoUtilisateur table
+      // Get user info from profiles table
       const { data: userData, error: userError } = await supabase
-        .from('infoUtilisateur')
-        .select('*')
-        .eq('idUser', authData.user.id)
-        .single();
-
-      if (userError) {
-        setError(t('auth.loginError'));
-        return;
-      }
-
-      // Check if profile exists
-      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
-      // If profile doesn't exist, create it
-      if (profileError && profileError.code === 'PGRST116') {
-        const { error: createProfileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: authData.user.id,
-              full_name: userData.full_name,
-              email: userData.email,
-              avatar_url: userData.avatar
-            }
-          ]);
-
-        if (createProfileError) {
-          console.error('Error creating profile:', createProfileError);
-          setError(t('auth.loginError'));
-          return;
-        }
-      } else if (profileError) {
-        console.error('Error checking profile:', profileError);
+      if (userError) {
+        console.error('Error fetching user data:', userError);
         setError(t('auth.loginError'));
         return;
       }
 
-      // Update state with user info
-      setUserInfo({
-        id: userData.idUser,
-        email: userData.email,
-        role: userData.role,
-        avatar: userData.avatar
-      });
+      if (userData) {
+        setUserInfo({
+          id: userData.id,
+          email: userData.email,
+          role: userData.role,
+          avatar: userData.avatar
+        });
+      }
 
       // Store authentication state
       localStorage.setItem('isAuthenticated', 'true');

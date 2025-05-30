@@ -14,6 +14,7 @@ export default function Inscription() {
   const dispatch = useDispatch();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
 
   const {
     register,
@@ -46,23 +47,27 @@ export default function Inscription() {
       }
 
       console.log('Fetching user data...');
-      // Get user data from infoUtilisateur table
+      // Get user data from profiles table
       const { data: userData, error: userError } = await supabase
-        .from('infoUtilisateur')
+        .from('profiles')
         .select('*')
-        .eq('idUser', authData.user.id)
+        .eq('id', authData.user.id)
         .single();
 
       if (userError) {
-        console.error('User data fetch error:', userError);
+        console.error('Error fetching user data:', userError);
         setError(userError.message || t('auth.loginError'));
         return;
       }
 
-      if (!userData) {
-        console.error('No user data found');
-        setError(t('auth.loginError'));
-        return;
+      if (userData) {
+        setUserInfo({
+          id: userData.id,
+          email: userData.email,
+          name: userData.full_name,
+          role: userData.role,
+          avatar: userData.avatar
+        });
       }
 
       // Update Redux store with user info

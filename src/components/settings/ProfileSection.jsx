@@ -119,14 +119,15 @@ export default function ProfileSection() {
         throw new Error('No user found');
       }
 
-      // Update user info in infoUtilisateur table
+      // Update profile in profiles table
       const { error: updateError } = await supabase
-        .from('infoUtilisateur')
+        .from('profiles')
         .update({
           full_name: profileData.name,
-          avatar: profileData.avatar
+          avatar: profileData.avatar,
+          avatar_url: profileData.avatar
         })
-        .eq('idUser', currentUser.id);
+        .eq('id', currentUser.id);
 
       if (updateError) {
         console.error('Database update error:', updateError);

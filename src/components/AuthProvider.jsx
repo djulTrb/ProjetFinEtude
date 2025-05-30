@@ -15,25 +15,30 @@ export default function AuthProvider({ children }) {
         if (sessionError) throw sessionError;
         
         if (session) {
-          // Get user info from infoUtilisateur table
+          // Get user info from profiles table
           const { data: userData, error: userError } = await supabase
-            .from('infoUtilisateur')
+            .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-          if (userError) throw userError;
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            dispatch(clearUser());
+            return;
+          }
 
-          // Update Redux store with user info
-          dispatch(updateUser({
-            id: userData.id,
-            email: userData.email,
-            name: userData.full_name,
-            role: userData.role,
-            avatar: userData.avatar,
-            language: userData.language || 'fr',
-            isAuthenticated: true
-          }));
+          if (userData) {
+            dispatch(updateUser({
+              id: userData.id,
+              email: userData.email,
+              name: userData.full_name,
+              role: userData.role,
+              avatar: userData.avatar,
+              language: userData.language || 'fr',
+              isAuthenticated: true
+            }));
+          }
         } else {
           dispatch(clearUser());
         }
@@ -49,9 +54,9 @@ export default function AuthProvider({ children }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Get user info from infoUtilisateur table
+        // Get user info from profiles table
         const { data: userData, error: userError } = await supabase
-          .from('infoUtilisateur')
+          .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
@@ -62,16 +67,17 @@ export default function AuthProvider({ children }) {
           return;
         }
 
-        // Update Redux store with user info
-        dispatch(updateUser({
-          id: userData.id,
-          email: userData.email,
-          name: userData.full_name,
-          role: userData.role,
-          avatar: userData.avatar,
-          language: userData.language || 'fr',
-          isAuthenticated: true
-        }));
+        if (userData) {
+          dispatch(updateUser({
+            id: userData.id,
+            email: userData.email,
+            name: userData.full_name,
+            role: userData.role,
+            avatar: userData.avatar,
+            language: userData.language || 'fr',
+            isAuthenticated: true
+          }));
+        }
       } else if (event === 'SIGNED_OUT') {
         dispatch(clearUser());
       }

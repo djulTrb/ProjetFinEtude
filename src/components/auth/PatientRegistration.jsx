@@ -12,12 +12,7 @@ export default function PatientRegistration() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    id: null,
-    email: null,
-    role: null,
-    avatar: null
-  });
+  
 
   const {
     register,
@@ -46,7 +41,6 @@ export default function PatientRegistration() {
     setError('');
     
     try {
-      // Sign up with Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -57,7 +51,6 @@ export default function PatientRegistration() {
         return;
       }
 
-      // Create profile in profiles table
       const { data: userData, error: profileError } = await supabase
         .from('profiles')
         .insert([
@@ -81,12 +74,6 @@ export default function PatientRegistration() {
 
       setSuccess(true);
       
-      setUserInfo({
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        avatar: userData.avatar
-      });
 
       setTimeout(() => {
         navigate('/agenda');

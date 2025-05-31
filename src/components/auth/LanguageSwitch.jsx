@@ -13,7 +13,6 @@ const LanguageSwitch = () => {
     i18n.changeLanguage(newLang);
     dispatch(updateLanguage(newLang));
     
-    // Update user role translation
     const currentRole = localStorage.getItem('userRole');
     if (currentRole) {
       dispatch(updateUser({ 

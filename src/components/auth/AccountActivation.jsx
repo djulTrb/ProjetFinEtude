@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { CheckCircle, XCircle, Spinner } from 'phosphor-react';
 
 export default function AccountActivation() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState('loading'); // loading, success, error
+  const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -19,24 +17,13 @@ export default function AccountActivation() {
       return;
     }
 
-    // Simulate API call to verify the token
     const verifyToken = async () => {
       try {
-        // In a real app, this would be an API call
-        // const response = await fetch('/api/verify-token', {
-        //   method: 'POST',
-        //   body: JSON.stringify({ token }),
-        //   headers: { 'Content-Type': 'application/json' }
-        // });
-        
-        // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Simulate successful verification
         setStatus('success');
         setMessage('Votre compte a été activé avec succès !');
         
-        // Redirect to login after 3 seconds
         setTimeout(() => {
           navigate('/inscription');
         }, 3000);

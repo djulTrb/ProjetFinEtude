@@ -2,55 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Calendar, CaretLeft, CaretRight, Clock, Check, X, Plus, Lock, LockOpen, User, Note, List } from 'phosphor-react';
+import { CaretLeft, CaretRight, Lock, LockOpen} from 'phosphor-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isSameHour, setHours, getHours, addDays, getMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { blockDay, unblockDay, blockHour, unblockHour, setBlockedTimes } from '../store/slices/appointmentsSlice';
-import { setSidebarOpen } from '../store/slices/sidebarSlice';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
-// Mock data for appointments - in a real app, this would come from an API
-const mockAppointments = [
-  {
-    id: 1,
-    patientId: 101,
-    patientName: 'Jean Dupont',
-    date: '2023-06-15T10:00:00',
-    status: 'pending', // pending, accepted, declined
-    type: 'consultation'
-  },
-  {
-    id: 2,
-    patientId: 102,
-    patientName: 'Marie Martin',
-    date: '2023-06-15T14:30:00',
-    status: 'accepted',
-    type: 'follow-up'
-  },
-  {
-    id: 3,
-    patientId: 103,
-    patientName: 'Pierre Durand',
-    date: '2023-06-20T09:15:00',
-    status: 'declined',
-    type: 'consultation'
-  }
-];
 
-// Generate time slots from 8 AM to 6 PM with 30-minute intervals
 const generateTimeSlots = () => {
   const slots = [];
   for (let hour = 8; hour <= 18; hour++) {
     slots.push({ hour, minutes: 0 });
-    if (hour !== 18) { // Don't add :30 for the last hour
+    if (hour !== 18) {
       slots.push({ hour, minutes: 30 });
     }
   }
   return slots;
 };
 
-// Format time slot for display
 const formatTimeSlot = (slot) => {
   return `${String(slot.hour).padStart(2, '0')}:${String(slot.minutes).padStart(2, '0')}`;
 };
@@ -60,9 +30,8 @@ export default function Agenda() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user);
   const { blockedTimes } = useSelector((state) => state.appointments);
-  const isOpen = useSelector((state) => state.sidebar.isOpen);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [appointments, setAppointments] = useState(mockAppointments);
+  const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedHour, setSelectedHour] = useState(null);
   const [selectedMinutes, setSelectedMinutes] = useState(null);
@@ -70,18 +39,15 @@ export default function Agenda() {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
   const [activeAppointment, setActiveAppointment] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isStacked, setIsStacked] = useState(false);
-  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 800);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const timeSlots = generateTimeSlots();
-  const minAppointmentDate = addDays(new Date(), 2); // Minimum date is 2 days from now
+  const minAppointmentDate = addDays(new Date(), 2);
   
-  // Form state using React Hook Form
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: {
       phone: '',
@@ -90,7 +56,6 @@ export default function Agenda() {
     }
   });
 
-  // Check if a time slot is blocked
   const isTimeSlotBlocked = (date, timeSlot) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return blockedTimes.hours.some(
@@ -100,7 +65,6 @@ export default function Agenda() {
     ) || blockedTimes.days.includes(formattedDate);
   };
 
-  // Get appointments for a specific time slot
   const getAppointmentsForTimeSlot = (date, timeSlot) => {
     return appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.date);
@@ -111,12 +75,10 @@ export default function Agenda() {
     });
   };
 
-  // Handle blocking/unblocking a time slot
   const handleTimeSlotBlock = async (date, timeSlot) => {
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
       if (isTimeSlotBlocked(date, timeSlot)) {
-        // Unblock: delete from creneaux_bloques
         const { error: deleteError } = await supabase
           .from('creneaux_bloques')
           .delete()
@@ -133,10 +95,9 @@ export default function Agenda() {
           minutes: timeSlot.minutes 
         }));
       } else {
-        // Don't block if there's an appointment
         const hasAppointment = getAppointmentsForTimeSlot(date, timeSlot).length > 0;
         if (!hasAppointment) {
-          // Block: insert into creneaux_bloques
+          
           const { error: insertError } = await supabase
             .from('creneaux_bloques')
             .insert([{
@@ -161,25 +122,22 @@ export default function Agenda() {
     }
   };
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
       setIsStacked(window.innerWidth < 640);
-      setIsLargeScreen(window.innerWidth >= 800);
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Generate calendar days for the current month
+  
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Get appointments for the selected date
   const getAppointmentsForDate = (date) => {
     return appointments.filter(appointment => 
       isSameDay(parseISO(appointment.date), date) && 
@@ -187,7 +145,6 @@ export default function Agenda() {
     );
   };
 
-  // Get appointments for a specific hour on the selected date
   const getAppointmentsForHour = (date, hour) => {
     return appointments.filter(appointment => {
       const appointmentDate = parseISO(appointment.date);
@@ -197,7 +154,6 @@ export default function Agenda() {
     });
   };
 
-  // Navigate to previous month/day
   const goToPrevious = () => {
     if (selectedDate) {
       setSelectedDate(prev => {
@@ -210,9 +166,7 @@ export default function Agenda() {
     }
   };
 
-  // Navigate to next month/day
   const goToNext = () => {
-    // Limit to 3 months in the future
     const maxDate = new Date();
     maxDate.setMonth(maxDate.getMonth() + 3);
     
@@ -230,9 +184,7 @@ export default function Agenda() {
     }
   };
 
-  // Handle date selection
   const handleDateClick = (date) => {
-    // Only allow selecting dates from today to 3 months in the future
     const today = new Date();
     const maxDate = new Date();
     maxDate.setMonth(maxDate.getMonth() + 3);
@@ -240,43 +192,20 @@ export default function Agenda() {
     if (date >= today && date <= maxDate) {
       setSelectedDate(date);
       
-      // If user is a doctor, show the block modal
       if (user.role.toLowerCase() === 'doctor') {
         setShowBlockModal(true);
       }
     }
   };
-
-  // Handle hour selection
-  const handleHourClick = (hour) => {
-    if (!selectedDate) return;
-    
-    const isBlocked = isHourBlocked(selectedDate, hour);
-    const hasAppointment = getAppointmentsForHour(selectedDate, hour).length > 0;
-    const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
-    
-    // Only allow selecting available hours and when the day is not blocked
-    if (!isBlocked && !hasAppointment && !isDayBlocked) {
-      setSelectedHour(hour);
-      
-      // If user is a patient, show the appointment form
-      if (user.role.toLowerCase() === 'patient') {
-        setShowAppointmentForm(true);
-      }
-    }
-  };
-
-  // Fetch appointments and user data
+  
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get current user from Supabase auth
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
 
-      // Fetch user profile
       const { data: userProfile, error: userProfileError } = await supabase
         .from('profiles')
         .select('*')
@@ -285,14 +214,12 @@ export default function Agenda() {
 
       if (userProfileError) throw userProfileError;
 
-      // Fetch blocked times from creneaux_bloques
       const { data: blockedTimesData, error: blockedTimesError } = await supabase
         .from('creneaux_bloques')
         .select('*');
 
       if (blockedTimesError) throw blockedTimesError;
 
-      // Transform blocked times data
       const blockedDays = blockedTimesData
         .filter(block => block.type_blocage === 'jour')
         .map(block => format(new Date(block.date), 'yyyy-MM-dd'));
@@ -305,10 +232,8 @@ export default function Agenda() {
           minutes: block.minutes
         }));
 
-      // Update Redux store with blocked times
       dispatch(setBlockedTimes({ days: blockedDays, hours: blockedHours }));
 
-      // Fetch appointments based on user role
       let appointmentsQuery = supabase
         .from('rendez_vous')
         .select(`
@@ -326,7 +251,6 @@ export default function Agenda() {
       const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
       if (appointmentsError) throw appointmentsError;
 
-      // Transform appointments data
       const transformedAppointments = appointmentsData.map(appointment => ({
         id: appointment.id,
         patientId: appointment.patient_id,
@@ -341,15 +265,12 @@ export default function Agenda() {
 
       setAppointments(transformedAppointments);
 
-      // Check for active appointment
       const now = new Date();
       const activeAppointment = transformedAppointments.find(app => {
         const appointmentDate = new Date(app.date);
-        // For accepted appointments, only show if the date hasn't passed
         if (app.status === 'accepte') {
           return appointmentDate > now;
         }
-        // For pending or refused appointments, show them regardless of date
         return app.status === 'en_attente' || app.status === 'refuse';
       });
 
@@ -358,7 +279,6 @@ export default function Agenda() {
         setHasActiveAppointment(true);
         localStorage.setItem('activeAppointment', JSON.stringify(activeAppointment));
       } else {
-        // If no active appointment found, clear the state
         setActiveAppointment(null);
         setHasActiveAppointment(false);
         localStorage.removeItem('activeAppointment');
@@ -372,10 +292,8 @@ export default function Agenda() {
     }
   };
 
-  // Add useEffect to fetch data periodically
   useEffect(() => {
     fetchData();
-    // Set up polling every 30 seconds to check for status updates
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -385,13 +303,11 @@ export default function Agenda() {
     try {
       setLoading(true);
       
-      // Get the current user from Supabase auth
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
       if (authError) throw authError;
       if (!authUser) throw new Error('No authenticated user found');
 
-      // Get the user's profile to ensure we have their name
       const { data: userProfile, error: userProfileError } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
@@ -407,7 +323,6 @@ export default function Agenda() {
         throw new Error('User profile name not found');
       }
 
-      // Create appointment record with time adjusted by -1 hour
       const appointmentDate = new Date(selectedDate);
       appointmentDate.setHours(selectedHour - 1, selectedMinutes || 0, 0, 0);
 
@@ -431,7 +346,6 @@ export default function Agenda() {
         throw appointmentError;
       }
 
-      // Update local state with the user's actual name
       const newAppointment = {
         id: appointment.id,
         patientId: authUser.id,
@@ -444,15 +358,12 @@ export default function Agenda() {
         telephone: data.phone
       };
       
-      // Update appointments list and set active appointment
       setAppointments(prev => [...prev, newAppointment]);
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
       
-      // Store in localStorage for persistence
       localStorage.setItem('activeAppointment', JSON.stringify(newAppointment));
 
-      // Close modal and reset form
       setShowAppointmentForm(false);
       setSelectedHour(null);
       setSelectedMinutes(null);
@@ -466,12 +377,10 @@ export default function Agenda() {
     }
   };
 
-  // Handle appointment modification
   const handleChangeAppointment = async () => {
     try {
       setLoading(true);
       
-      // Delete the refused appointment from the database
       const { error: deleteError } = await supabase
         .from('rendez_vous')
         .delete()
@@ -482,7 +391,6 @@ export default function Agenda() {
         throw deleteError;
       }
 
-      // Update local state
       setAppointments(prev => prev.filter(app => app.id !== activeAppointment.id));
     setHasActiveAppointment(false);
     setActiveAppointment(null);
@@ -495,19 +403,10 @@ export default function Agenda() {
     }
   };
 
-  // Handle appointment deletion
-  const handleDeleteAppointment = () => {
-    setHasActiveAppointment(false);
-    setActiveAppointment(null);
-    // Reset to calendar view
-  };
-
-  // Format time for display
   const formatAppointmentTime = (dateString) => {
     return format(parseISO(dateString), 'HH:mm');
   };
 
-  // Get status color
   const getStatusColor = (status) => {
     switch (status) {
       case 'accepte':
@@ -521,51 +420,42 @@ export default function Agenda() {
     }
   };
 
-  // Get day name in current language with mobile optimization
   const getDayName = (date, isMobile = false) => {
     const dayIndex = date.getDay();
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayName = t(`agenda.days.${days[dayIndex]}`);
     
-    // Remove "ال" prefix for Arabic on mobile
     if (isMobile && i18n.language === 'ar') {
       return dayName.replace('ال', '');
     }
     return dayName;
   };
 
-  // Get month name in current language
   const getMonthName = (date) => {
     const monthIndex = date.getMonth();
     const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     return t(`agenda.months.${months[monthIndex]}`);
   };
 
-  // Get status text in current language
   const getStatusText = (status) => {
     return t(`agenda.status.${status}`);
   };
 
-  // Check if a day is blocked
   const isDayBlocked = (date) => {
     return blockedTimes.days.includes(format(date, 'yyyy-MM-dd'));
   };
 
-  // Check if an hour is blocked
   const isHourBlocked = (date, hour) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    // Check if either the specific hour is blocked OR the entire day is blocked
     return blockedTimes.hours.some(
       block => block.date === formattedDate && block.hour === hour
     ) || blockedTimes.days.includes(formattedDate);
   };
  
-  // Handle blocking/unblocking a day
   const handleDayBlock = async (date) => {
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
       if (isDayBlocked(date)) {
-        // Unblock: delete from creneaux_bloques
         const { error: deleteError } = await supabase
           .from('creneaux_bloques')
           .delete()
@@ -576,7 +466,6 @@ export default function Agenda() {
 
         dispatch(unblockDay(formattedDate));
       } else {
-        // Block: insert into creneaux_bloques
         const { error: insertError } = await supabase
           .from('creneaux_bloques')
           .insert([{
@@ -596,17 +485,6 @@ export default function Agenda() {
     }
   };
 
-  // Handle blocking/unblocking an hour
-  const handleHourBlock = (date, hour) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    if (isHourBlocked(date, hour)) {
-      dispatch(unblockHour({ date: formattedDate, hour }));
-    } else {
-      dispatch(blockHour({ date: formattedDate, hour }));
-    }
-  };
-
-  // Handle time slot click
   const handleTimeSlotClick = (timeSlot) => {
     if (!selectedDate) return;
     
@@ -614,34 +492,30 @@ export default function Agenda() {
     const hasAppointment = getAppointmentsForTimeSlot(selectedDate, timeSlot).length > 0;
     const isDayBlocked = blockedTimes.days.includes(format(selectedDate, 'yyyy-MM-dd'));
     
-    // Only allow selecting available hours and when the day is not blocked
     if (!isBlocked && !hasAppointment && !isDayBlocked) {
       setSelectedHour(timeSlot.hour);
       setSelectedMinutes(timeSlot.minutes);
       
-      // If user is a patient, show the appointment form
       if (user.role.toLowerCase() === 'patient') {
         setShowAppointmentForm(true);
       }
     }
   };
 
-  // Render the month view
   const renderMonthView = () => {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const firstDayOfMonth = startOfMonth(currentDate);
-    const firstDayIndex = firstDayOfMonth.getDay();
     
     return (
       <div className={`grid ${isStacked ? 'grid-cols-1' : 'grid-cols-7'} gap-1 overflow-x-auto`}>
-        {/* Day headers */}
+        
         {!isStacked && days.map((day, index) => (
           <div key={day} className="text-center font-medium text-gray-600 py-2 text-xs sm:text-sm">
             {isMobile ? getDayName(new Date(firstDayOfMonth.getTime() + index * 24 * 60 * 60 * 1000), true) : t(`agenda.days.${day}`)}
           </div>
         ))}
         
-        {/* Calendar days */}
+       
         {calendarDays.map((day, index) => {
           const isToday = isSameDay(day, new Date());
           const isPast = day < minAppointmentDate;
@@ -694,7 +568,6 @@ export default function Agenda() {
     );
   };
 
-  // Time slots view for patients
   const renderTimeSlotsView = () => {
     if (!selectedDate) return null;
 
@@ -773,7 +646,6 @@ export default function Agenda() {
     );
   };
 
-  // Block Modal for doctors
   const renderBlockModal = () => {
     if (!selectedDate) return null;
 
@@ -846,7 +718,6 @@ export default function Agenda() {
     );
   };
 
-  // Appointment Form Modal for patients
   const renderAppointmentForm = () => {
     if (!selectedDate || !selectedHour) return null;
 
@@ -965,7 +836,7 @@ export default function Agenda() {
     );
   };
 
-  // Render appointment management view
+  
   const renderAppointmentManagement = () => {
     if (!hasActiveAppointment || !activeAppointment || user.role.toLowerCase() !== 'patient') return null;
 
@@ -1047,7 +918,6 @@ export default function Agenda() {
         renderAppointmentManagement()
       ) : (
         <>
-          {/* Header with navigation */}
           <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-white border-b">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{t('agenda.title')}</h1>
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -1069,21 +939,16 @@ export default function Agenda() {
             </div>
           </div>
 
-          {/* Calendar content */}
           <div className="flex-1 p-2 sm:p-4 overflow-auto">
             {renderMonthView()}
           </div>
 
-          {/* Block Modal for doctors */}
           {showBlockModal && renderBlockModal()}
 
-          {/* Time slots view for patients */}
           {selectedDate && user.role.toLowerCase() === 'patient' && !showAppointmentForm && renderTimeSlotsView()}
 
-          {/* Appointment Form Modal for patients */}
           {showAppointmentForm && renderAppointmentForm()}
 
-          {/* Appointment Modal */}
           {showAppointmentModal && selectedAppointment && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6">

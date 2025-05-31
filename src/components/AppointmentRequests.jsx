@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { X, Check, User, Note } from 'phosphor-react';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function AppointmentRequests() {
   const { t } = useTranslation();
@@ -12,7 +11,6 @@ export default function AppointmentRequests() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch appointment requests
   useEffect(() => {
     const fetchRequests = async () => {
       try {
@@ -55,10 +53,8 @@ export default function AppointmentRequests() {
     fetchRequests();
   }, []);
 
-  // Handle appointment action (accept or decline)
   const handleAppointmentAction = async (requestId, action) => {
     try {
-      // Update appointment status
       const { error: updateError } = await supabase
         .from('rendez_vous')
         .update({ statut: action === 'accept' ? 'accepte' : 'refuse' })
@@ -66,7 +62,6 @@ export default function AppointmentRequests() {
 
       if (updateError) throw updateError;
 
-      // Update local state
       setRequests(prevRequests => 
         prevRequests.filter(request => request.id !== requestId)
       );
@@ -76,7 +71,6 @@ export default function AppointmentRequests() {
     }
   };
 
-  // Get appointment type color
   const getAppointmentTypeColor = (type) => {
     switch (type) {
       case 'consultation': return 'bg-blue-100 text-blue-800';
@@ -86,7 +80,6 @@ export default function AppointmentRequests() {
     }
   };
 
-  // Format date for display
   const formatDate = (dateString) => {
     const date = parseISO(dateString);
     const dayIndex = date.getDay();
@@ -132,7 +125,6 @@ export default function AppointmentRequests() {
                 key={request.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4"
               >
-                {/* Patient profile picture and name */}
                 <div className="flex items-center w-full sm:w-1/3">
                   <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mr-3">
                     {request.profilePicture ? (
@@ -151,7 +143,6 @@ export default function AppointmentRequests() {
                   </div>
                 </div>
 
-                {/* Appointment type and note */}
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 rounded-full text-xs ${getAppointmentTypeColor(request.type)}`}>
                     {t(`agenda.appointmentTypes.${request.type}`)}
@@ -166,7 +157,6 @@ export default function AppointmentRequests() {
                   )}
                 </div>
 
-                {/* Action buttons */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAppointmentAction(request.id, 'accept')}
@@ -187,7 +177,6 @@ export default function AppointmentRequests() {
         )}
       </div>
 
-      {/* Note Modal */}
       {selectedNote && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">

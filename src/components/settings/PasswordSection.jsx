@@ -41,7 +41,7 @@ export default function PasswordSection() {
       ...passwordData,
       [name]: value,
     });
-    // Clear error when user starts typing
+    
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -92,13 +92,11 @@ export default function PasswordSection() {
 
     setIsSubmitting(true);
     try {
-      // Get the current user's email
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('No user found');
       }
 
-      // First, verify the current password by attempting to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: passwordData.currentPassword,
@@ -111,7 +109,6 @@ export default function PasswordSection() {
         return;
       }
 
-      // If current password is correct, update to new password
       const { error: updateError } = await supabase.auth.updateUser({
         password: passwordData.newPassword,
       });
@@ -120,7 +117,6 @@ export default function PasswordSection() {
         throw updateError;
       }
 
-      // Clear form and show success message
       setPasswordData({
         currentPassword: "",
         newPassword: "",

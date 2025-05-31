@@ -35,7 +35,6 @@ export default function ProfileSection() {
       ...profileData,
       [name]: value,
     });
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -46,10 +45,10 @@ export default function ProfileSection() {
 
   const compressImage = async (file) => {
     const options = {
-      maxSizeMB: 1, // Max file size 1MB
-      maxWidthOrHeight: 500, // Max width/height 500px
-      useWebWorker: true, // Use web worker for better performance
-      fileType: 'image/jpeg', // Convert to JPEG for better compression
+      maxSizeMB: 1,
+      maxWidthOrHeight: 500,
+      useWebWorker: true,
+      fileType: 'image/jpeg', 
     };
 
     try {
@@ -64,7 +63,7 @@ export default function ProfileSection() {
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 5 * 1024 * 1024) {
         setErrors({
           ...errors,
           avatar: t('validation.fileTooLarge'),
@@ -74,10 +73,9 @@ export default function ProfileSection() {
       
       setIsCompressing(true);
       try {
-        // Compress the image
+        
         const compressedFile = await compressImage(file);
         
-        // Convert compressed file to base64
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64String = reader.result;
@@ -113,13 +111,11 @@ export default function ProfileSection() {
     
     setIsSubmitting(true);
     try {
-      // Get current user
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) {
         throw new Error('No user found');
       }
 
-      // Update profile in profiles table
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -134,7 +130,6 @@ export default function ProfileSection() {
         throw new Error('Failed to update profile information');
       }
 
-      // Update Redux store
       dispatch(updateProfile({
         name: profileData.name,
         email: user.email,

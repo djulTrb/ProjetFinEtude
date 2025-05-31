@@ -13,33 +13,15 @@ export default function Parameters() {
   return (
     <div className="p-6 w-full max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-8">{t('settings.title')}</h1>
-      
       <div className="space-y-8">
-        {/* Language Settings */}
-        
-         
           <LanguageDropdown />
-        
-
-        {/* Profile and Password Settings - Only visible for patients */}
         {!isDoctor && (
           <>
-            
-              
               <ProfileSection />
-            
-
-            
-              
               <PasswordSection />
-            
           </>
         )}
-
-        {/* Disconnect Section */}
-        
           <DisconnectSection />
-        
       </div>
     </div>
   );

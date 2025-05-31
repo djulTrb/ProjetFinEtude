@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Plus } from "phosphor-react";
 import { useTranslation } from "react-i18next";
 import { initialAnnouncements } from "./announcements/utils";
-import AnnouncementCard from "./announcements/AnnouncementCard";
 import { AddModal, DeleteModal } from "./announcements/AnnouncementModals";
 import { useSelector } from "react-redux";
 
@@ -20,7 +19,6 @@ export default function Annonces() {
   });
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Filter announcements based on user role
   const filteredAnnouncements = user.role.toLowerCase() === 'patient' 
     ? announcements.filter(announcement => announcement.author.toLowerCase().includes('dr.'))
     : announcements;
@@ -67,7 +65,6 @@ export default function Annonces() {
 
   return (
     <div className="w-full max-w-[2000px] mx-auto py-4 sm:py-6 px-2 sm:px-4 md:px-6">
-      {/* Header with Add Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">
@@ -88,7 +85,6 @@ export default function Annonces() {
         )}
       </div>
 
-      {/* Announcements List */}
       <div className="grid gap-4 sm:gap-6">
         {filteredAnnouncements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -139,7 +135,6 @@ export default function Annonces() {
         )}
       </div>
 
-      {/* Modals */}
       {user.role.toLowerCase() === 'doctor' && (
         <>
           <AddModal

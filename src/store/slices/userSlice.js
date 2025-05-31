@@ -1,6 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-// Load initial state from localStorage
 const loadUserState = () => {
   try {
     const userState = localStorage.getItem('userState');

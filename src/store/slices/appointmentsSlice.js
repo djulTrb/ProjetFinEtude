@@ -3,8 +3,8 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   appointments: [],
   blockedTimes: {
-    days: [], // Array of blocked full days
-    hours: [], // Array of blocked specific hours {date: string, hour: number, minutes: number}
+    days: [], 
+    hours: [], 
   },
   loading: false,
   error: null,

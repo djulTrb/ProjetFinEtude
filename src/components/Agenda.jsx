@@ -237,7 +237,13 @@ export default function Agenda() {
       let appointmentsQuery = supabase
         .from('rendez_vous')
         .select(`
-          *,
+          id,
+          patient_id,
+          date_heure,
+          type_rendez_vous,
+          statut,
+          note,
+          telephone,
           patient:profiles!rendez_vous_patient_id_fkey(
             full_name,
             avatar_url
@@ -245,25 +251,42 @@ export default function Agenda() {
         `);
 
       if (user.role.toLowerCase() === 'patient') {
-        appointmentsQuery = appointmentsQuery.eq('patient_id', authUser.id);
+        const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
+        if (appointmentsError) throw appointmentsError;
+
+        const transformedAppointments = appointmentsData.map(appointment => ({
+          id: appointment.id,
+          patientId: appointment.patient_id,
+          patientName: appointment.patient_id === authUser.id 
+            ? (appointment.patient_full_name || appointment.patient?.full_name || 'Unknown')
+            : 'Booked',
+          profilePicture: appointment.patient_id === authUser.id ? appointment.patient?.avatar_url : null,
+          date: appointment.date_heure,
+          type: appointment.type_rendez_vous,
+          status: appointment.statut,
+          note: appointment.note,
+          telephone: appointment.telephone
+        }));
+
+        setAppointments(transformedAppointments);
+      } else {
+        const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
+        if (appointmentsError) throw appointmentsError;
+
+        const transformedAppointments = appointmentsData.map(appointment => ({
+          id: appointment.id,
+          patientId: appointment.patient_id,
+          patientName: appointment.patient_full_name || appointment.patient?.full_name || 'Unknown',
+          profilePicture: appointment.patient?.avatar_url,
+          date: appointment.date_heure,
+          type: appointment.type_rendez_vous,
+          status: appointment.statut,
+          note: appointment.note,
+          telephone: appointment.telephone
+        }));
+
+        setAppointments(transformedAppointments);
       }
-
-      const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
-      if (appointmentsError) throw appointmentsError;
-
-      const transformedAppointments = appointmentsData.map(appointment => ({
-        id: appointment.id,
-        patientId: appointment.patient_id,
-        patientName: appointment.patient_full_name || appointment.patient?.full_name || 'Unknown',
-        profilePicture: appointment.patient?.avatar_url,
-        date: appointment.date_heure,
-        type: appointment.type_rendez_vous,
-        status: appointment.statut,
-        note: appointment.note,
-        telephone: appointment.telephone
-      }));
-
-      setAppointments(transformedAppointments);
 
       const now = new Date();
       const activeAppointment = transformedAppointments.find(app => {
@@ -608,7 +631,7 @@ export default function Agenda() {
                         </span>
                       ) : (
                         <span className="text-xs text-red-600">
-                          {hasActiveAppointment ? t('agenda.appointment') : t('agenda.blocked')}
+                          {hasActiveAppointment ? t('agenda.hasAppointment') : t('agenda.blocked')}
                         </span>
                       )}
                     </div>

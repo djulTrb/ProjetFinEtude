@@ -321,7 +321,6 @@ export default function Agenda() {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle form submission
   const onSubmit = async (data) => {
     try {
       setLoading(true);
@@ -468,13 +467,6 @@ export default function Agenda() {
     return blockedTimes.days.includes(format(date, 'yyyy-MM-dd'));
   };
 
-  const isHourBlocked = (date, hour) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    return blockedTimes.hours.some(
-      block => block.date === formattedDate && block.hour === hour
-    ) || blockedTimes.days.includes(formattedDate);
-  };
- 
   const handleDayBlock = async (date) => {
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');

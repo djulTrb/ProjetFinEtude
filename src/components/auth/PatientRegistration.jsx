@@ -44,27 +44,30 @@ export default function PatientRegistration() {
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+            role: 'patient'
+          }
+        }
       });
 
       if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        setError(signUpError.message || t('auth.registrationError'));
+        return;
+      }
+
+      if (!authData?.user) {
         setError(t('auth.registrationError'));
         return;
       }
 
-      const { data: userData, error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: authData.user.id,
-            full_name: data.fullName,
-            email: data.email,
-            avatar_url: null,
-            avatar: null,
-            role: 'patient'
-          },
-        ])
-        .select()
-        .single();
+      const { error: profileError } = await supabase.rpc('create_patient_profile', {
+        user_id: authData.user.id,
+        full_name: data.fullName,
+        user_email: data.email
+      });
 
       if (profileError) {
         console.error('Error creating profile:', profileError);
@@ -74,12 +77,12 @@ export default function PatientRegistration() {
 
       setSuccess(true);
       
-
       setTimeout(() => {
-        navigate('/agenda');
+        navigate('/inscription');
       }, 3000);
 
     } catch (err) {
+      console.error('Registration error:', err);
       setError(t('auth.registrationError'));
     } finally {
       setIsLoading(false);

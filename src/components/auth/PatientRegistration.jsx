@@ -12,7 +12,12 @@ export default function PatientRegistration() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  
+  const [userInfo, setUserInfo] = useState({
+    id: null,
+    email: null,
+    role: null,
+    avatar: null
+  });
 
   const {
     register,
@@ -41,33 +46,30 @@ export default function PatientRegistration() {
     setError('');
     
     try {
+      // Sign up with Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            full_name: data.fullName,
-            role: 'patient'
-          }
-        }
       });
 
       if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        setError(signUpError.message || t('auth.registrationError'));
-        return;
-      }
-
-      if (!authData?.user) {
         setError(t('auth.registrationError'));
         return;
       }
 
-      const { error: profileError } = await supabase.rpc('create_patient_profile', {
-        user_id: authData.user.id,
-        full_name: data.fullName,
-        user_email: data.email
-      });
+      // Create or update the profile using upsert to avoid duplicate key error
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert([
+          {
+            id: authData.user.id,
+            full_name: data.fullName,
+            email: data.email,
+            role: 'patient',
+            avatar_url: null,
+            avatar: null
+          },
+        ]);
 
       if (profileError) {
         console.error('Error creating profile:', profileError);
@@ -77,12 +79,18 @@ export default function PatientRegistration() {
 
       setSuccess(true);
       
+      setUserInfo({
+        id: authData.user.id,
+        email: data.email,
+        role: 'patient',
+        avatar: null
+      });
+
       setTimeout(() => {
-        navigate('/inscription');
+        navigate('/agenda');
       }, 3000);
 
     } catch (err) {
-      console.error('Registration error:', err);
       setError(t('auth.registrationError'));
     } finally {
       setIsLoading(false);

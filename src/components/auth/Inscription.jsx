@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Envelope, Lock } from 'phosphor-react';
+import { Envelope, Lock, User } from 'phosphor-react';
 import { supabase } from '../../lib/supabase';
 import { useDispatch } from 'react-redux';
 import { updateUser, updateProfile } from '../../store/slices/userSlice';
@@ -27,6 +27,8 @@ export default function Inscription() {
     setError('');
     
     try {
+      console.log('Attempting login...');
+      // Sign in with Supabase Auth
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -44,6 +46,8 @@ export default function Inscription() {
         return;
       }
 
+      console.log('Fetching user data...');
+      // Get user data from profiles table
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('*')
@@ -66,6 +70,7 @@ export default function Inscription() {
         });
       }
 
+      // Update Redux store with user info
       dispatch(updateUser({ role: userData.role }));
       dispatch(updateProfile({
         name: userData.full_name,
@@ -73,10 +78,22 @@ export default function Inscription() {
         avatar: userData.avatar
       }));
 
+      // Set authentication in localStorage
       localStorage.setItem('isAuthenticated', 'true');
 
+      // Log the state after update
+      console.log('Redux state after update:', {
+        role: userData.role,
+        name: userData.full_name,
+        email: userData.email,
+        avatar: userData.avatar
+      });
+
+      // Add a small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Redirect based on role
+      console.log('Navigating based on role:', userData.role);
       if (userData.role === 'doctor') {
         navigate('/tableau-de-bord', { replace: true });
       } else {

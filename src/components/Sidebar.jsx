@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   House,
   Megaphone,
+  ChatCircle,
   Calendar,
   Gear,
   CaretLeft,
@@ -24,13 +25,19 @@ export default function Sidebar() {
   const { t } = useTranslation();
   const user = useSelector((state) => state.user);
 
+  // Check if screen is mobile size
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 800);
     };
 
+    // Initial check
     handleResize();
+
+    // Add event listener
     window.addEventListener('resize', handleResize);
+
+    // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -67,15 +74,18 @@ export default function Sidebar() {
     },
   ];
 
+  // Filter items based on user role
   const filteredNavItems = navItems.filter(item => 
     item.roles.includes(user.role.toLowerCase())
   );
 
+  // For mobile, render a full overlay
   if (isMobile) {
     return (
       <AnimatePresence>
         {isOpen && (
           <>
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -84,6 +94,7 @@ export default function Sidebar() {
               onClick={() => dispatch(setSidebarOpen(false))}
             />
             
+            {/* Sidebar */}
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -91,6 +102,7 @@ export default function Sidebar() {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-50"
             >
+              {/* User profile section for mobile */}
               <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 rounded-full bg-sky-600 flex items-center justify-center overflow-hidden">
@@ -160,12 +172,14 @@ export default function Sidebar() {
     );
   }
 
+  // For desktop, render the normal sidebar
   return (
     <motion.div
       initial={false}
       animate={{ width: isOpen ? "240px" : "70px" }}
       className="h-full bg-white shadow-lg border-r border-gray-200 relative"
     >
+      {/* Toggle Button */}
       <motion.button
         onClick={() => dispatch(setSidebarOpen(!isOpen))}
         className="absolute -right-3 top-6 bg-white rounded-full p-1.5 shadow-md z-10 border border-gray-200 hover:bg-gray-50"

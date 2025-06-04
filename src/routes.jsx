@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import TableauDeBord from './components/TableauDeBord';
 import AppointmentRequests from './components/AppointmentRequests';
 
+// Protected Route component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.user);
   const isAuthInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
@@ -17,6 +18,7 @@ const ProtectedRoute = ({ children }) => {
   return isAuth ? children : <Navigate to="/inscription" />;
 };
 
+// Public Route component (redirects to agenda if already authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.user);
   const isAuthInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
@@ -27,6 +29,7 @@ const PublicRoute = ({ children }) => {
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/inscription" element={
         <PublicRoute>
           <Inscription />
@@ -38,6 +41,7 @@ export default function AppRoutes() {
         </PublicRoute>
       } />
 
+      {/* Protected Routes */}
       <Route path="/" element={
         <ProtectedRoute>
           <Layout />
@@ -51,6 +55,7 @@ export default function AppRoutes() {
         <Route path="demandes-rdv" element={<AppointmentRequests />} />
       </Route>
 
+      {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

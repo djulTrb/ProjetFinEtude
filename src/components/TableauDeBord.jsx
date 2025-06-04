@@ -19,18 +19,21 @@ const TableauDeBord = () => {
         setLoading(true);
         setError(null);
 
+        // Fetch total appointments
         const { count: appointmentsCount, error: appointmentsError } = await supabase
           .from('rendez_vous')
           .select('*', { count: 'exact', head: true });
 
         if (appointmentsError) throw appointmentsError;
 
+        // Fetch total accounts
         const { count: accountsCount, error: accountsError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
 
         if (accountsError) throw accountsError;
 
+        // Fetch total announcements
         const { count: announcementsCount, error: announcementsError } = await supabase
           .from('annonces')
           .select('*', { count: 'exact', head: true });
@@ -85,6 +88,7 @@ const TableauDeBord = () => {
     <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
       <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">{t('tableauDeBord.dashboard')}</h1>
       
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

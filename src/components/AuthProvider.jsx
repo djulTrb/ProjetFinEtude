@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { supabase } from '../lib/supabase';
 import { updateUser, clearUser } from '../store/slices/userSlice';
@@ -7,6 +7,7 @@ export default function AuthProvider({ children }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
+    // Check for existing session
     const checkSession = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -14,7 +15,7 @@ export default function AuthProvider({ children }) {
         if (sessionError) throw sessionError;
         
         if (session) {
-          
+          // Get user info from profiles table
           const { data: userData, error: userError } = await supabase
             .from('profiles')
             .select('*')
@@ -47,11 +48,13 @@ export default function AuthProvider({ children }) {
       }
     };
 
+    // Initial check
     checkSession();
 
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        
+        // Get user info from profiles table
         const { data: userData, error: userError } = await supabase
           .from('profiles')
           .select('*')
@@ -80,6 +83,7 @@ export default function AuthProvider({ children }) {
       }
     });
 
+    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };

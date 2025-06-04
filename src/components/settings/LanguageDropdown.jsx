@@ -9,7 +9,7 @@ export default function LanguageDropdown() {
   const dispatch = useDispatch();
 
   const languages = [
-    { code: 'fr', name: t('settings.language.french'), flag: 'FR' },
+    { code: 'fr', name: t('settings.language.french'), flag: '🇫🇷' },
     { code: 'ar', name: t('settings.language.arabic'), flag: 'AR' }
   ];
 

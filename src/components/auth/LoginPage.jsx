@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Envelope, Lock } from 'phosphor-react';
 import { supabase } from '../../lib/supabase';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../../store/userSlice';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -44,11 +46,13 @@ export default function LoginPage() {
     setError('');
     
     try {
+      // Check if credentials match doctor credentials
       const isDoctor = 
         data.email === import.meta.env.VITE_DOCTOR_EMAIL && 
         data.password === import.meta.env.VITE_DOCTOR_PASSWORD;
 
       if (isDoctor) {
+        // Set doctor info directly
         setUserInfo({
           id: 'doctor',
           email: data.email,
@@ -56,13 +60,16 @@ export default function LoginPage() {
           avatar: null
         });
 
+        // Store authentication state
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', 'doctor');
         
+        // Redirect to dashboard
         navigate('/tableau-de-bord');
         return;
       }
 
+      // Regular user login
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -73,6 +80,7 @@ export default function LoginPage() {
         return;
       }
 
+      // Get user info from profiles table
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('*')
@@ -94,9 +102,11 @@ export default function LoginPage() {
         });
       }
 
+      // Store authentication state
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userRole', userData.role);
 
+      // Redirect based on role
       if (userData.role === 'doctor') {
         navigate('/tableau-de-bord');
       } else {

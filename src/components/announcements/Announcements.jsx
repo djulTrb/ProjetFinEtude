@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { supabase } from '../../lib/supabase';
-import {  Plus, X, Image } from 'phosphor-react';
+import { Megaphone, Plus, Trash, X, Image } from 'phosphor-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -20,8 +20,10 @@ export default function Announcements() {
   const [isCreating, setIsCreating] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   
+  console.log('Current userRole:', userRole);
 
   useEffect(() => {
+    // Sync user role from localStorage to Redux if needed
     const storedRole = localStorage.getItem('userRole');
     if (storedRole && storedRole !== userRole) {
       dispatch(updateUser({ role: storedRole }));
@@ -159,7 +161,7 @@ export default function Announcements() {
 
   return (
     <div className="w-full max-w-[2000px] mx-auto py-4 sm:py-6 px-2 sm:px-4 md:px-6">
-      
+      {/* Header with Add Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div className="flex items-center gap-3">
           
@@ -183,6 +185,7 @@ export default function Announcements() {
         )}
       </div>
 
+      {/* Announcements List */}
       <div className="grid gap-4 sm:gap-6">
         {announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -246,6 +249,7 @@ export default function Announcements() {
         )}
       </div>
 
+      {/* Image Preview Modal */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div
@@ -278,6 +282,7 @@ export default function Announcements() {
         )}
       </AnimatePresence>
 
+      {/* Create Modal */}
       <AnimatePresence>
         {isCreating && (
           <motion.div

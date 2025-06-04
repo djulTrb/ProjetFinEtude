@@ -56,6 +56,24 @@ export default function Agenda() {
     }
   });
 
+  // Add useEffect to restore appointment state from localStorage
+  useEffect(() => {
+    const storedAppointment = localStorage.getItem('activeAppointment');
+    if (storedAppointment) {
+      try {
+        const parsedAppointment = JSON.parse(storedAppointment);
+        setActiveAppointment(parsedAppointment);
+        setHasActiveAppointment(true);
+        // Also set the modal state
+        setSelectedAppointment(parsedAppointment);
+        setShowAppointmentModal(true);
+      } catch (err) {
+        console.error('Error parsing stored appointment:', err);
+        localStorage.removeItem('activeAppointment');
+      }
+    }
+  }, []);
+
   const isTimeSlotBlocked = (date, timeSlot) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return blockedTimes.hours.some(
@@ -383,6 +401,9 @@ export default function Agenda() {
       setAppointments(prev => [...prev, newAppointment]);
       setActiveAppointment(newAppointment);
       setHasActiveAppointment(true);
+      // Also set the modal state
+      setSelectedAppointment(newAppointment);
+      setShowAppointmentModal(true);
       
       localStorage.setItem('activeAppointment', JSON.stringify(newAppointment));
 
@@ -414,8 +435,11 @@ export default function Agenda() {
       }
 
       setAppointments(prev => prev.filter(app => app.id !== activeAppointment.id));
-    setHasActiveAppointment(false);
-    setActiveAppointment(null);
+      setHasActiveAppointment(false);
+      setActiveAppointment(null);
+      // Also clear the modal state
+      setSelectedAppointment(null);
+      setShowAppointmentModal(false);
       localStorage.removeItem('activeAppointment');
     } catch (error) {
       console.error('Error changing appointment:', error);

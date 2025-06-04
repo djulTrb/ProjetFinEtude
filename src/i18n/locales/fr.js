@@ -75,27 +75,6 @@ export default {
       button: "Se déconnecter",
     },
   },
-  messagerie: {
-    title: "Messagerie",
-    today: "Aujourd'hui",
-    yesterday: "Hier",
-    typeMessage: "Tapez votre message...",
-    send: "Envoyer",
-    noMessages: "Aucun message",
-    startConversation: "Commencez une conversation",
-    searchPlaceholder: "Rechercher une conversation...",
-    newMessage: "Nouveau message",
-    deleteConversation: "Supprimer la conversation",
-    blockUser: "Bloquer l'utilisateur",
-    unblockUser: "Débloquer l'utilisateur",
-    reportUser: "Signaler l'utilisateur",
-    attachments: {
-      image: "Image",
-      file: "Fichier",
-      audio: "Audio",
-      video: "Vidéo"
-    }
-  },
   agenda: {
     title: "Agenda",
     appointmentDetails: "Détails du rendez-vous",

@@ -64,27 +64,6 @@ export default {
       button: "تسجيل الخروج",
     },
   },
-  messagerie: {
-    title: "المراسلات",
-    today: "اليوم",
-    yesterday: "أمس",
-    typeMessage: "اكتب رسالتك...",
-    send: "إرسال",
-    noMessages: "لا توجد رسائل",
-    startConversation: "ابدأ محادثة",
-    searchPlaceholder: "البحث عن محادثة...",
-    newMessage: "رسالة جديدة",
-    deleteConversation: "حذف المحادثة",
-    blockUser: "حظر المستخدم",
-    unblockUser: "إلغاء حظر المستخدم",
-    reportUser: "الإبلاغ عن المستخدم",
-    attachments: {
-      image: "صورة",
-      file: "ملف",
-      audio: "صوت",
-      video: "فيديو"
-    }
-  },
   agenda: {
     title: "المواعيد",
     appointmentDetails: "تفاصيل الموعد",
